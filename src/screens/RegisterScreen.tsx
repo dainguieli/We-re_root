@@ -420,7 +420,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess, onCan
           placeholder="Ex: Collège Moderne de Bouaké..."
           placeholderTextColor={COLORS.textMuted}
           value={customEcole}
-          onChangeText={(val) => setCustomEcole(val)}
+          onChangeText={(val: string) => setCustomEcole(val)}
         />
       </View>
 
