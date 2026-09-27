@@ -85,7 +85,7 @@ export const RatingScreen: React.FC<RatingScreenProps> = ({ session, onDone }) =
             >
               <Ionicons
                 name={star <= rating ? 'star' : 'star-outline'}
-                size={40}
+                size={36}
                 color={star <= rating ? COLORS.accent : COLORS.border}
               />
             </TouchableOpacity>
@@ -161,8 +161,8 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingTop: 40,
-    paddingBottom: 40,
+    paddingTop: 24,
+    paddingBottom: 90,
   },
   header: {
     alignItems: 'center',

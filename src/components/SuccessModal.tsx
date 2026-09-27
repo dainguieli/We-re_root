@@ -199,6 +199,7 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 420,
+    maxHeight: '88%',
     backgroundColor: COLORS.card,
     borderRadius: 24,
     padding: 24,
@@ -207,7 +208,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.borderLight,
     position: 'relative',
-    overflow: 'visible',
   },
   sparkleOrbit: {
     position: 'absolute',

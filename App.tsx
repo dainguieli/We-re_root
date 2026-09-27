@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Text,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppProvider, useApp } from './src/context/AppContext';
@@ -329,6 +330,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
   },
   centerContainer: {
     flex: 1,
@@ -343,6 +345,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+    paddingBottom: Platform.OS === 'ios' ? 18 : 6,
     ...SHADOWS.md,
   },
   tabBar: {
@@ -351,7 +354,6 @@ const styles = StyleSheet.create({
     maxWidth: 760,
     alignSelf: 'center',
     paddingVertical: 6,
-    paddingBottom: 10,
     alignItems: 'center',
     justifyContent: 'space-around',
   },

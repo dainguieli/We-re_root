@@ -136,9 +136,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
-    paddingTop: 45,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingTop: 8,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
     ...SHADOWS.sm,
   },
   responsiveWrapper: {

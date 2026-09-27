@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   responsiveWrapper: {
     width: '100%',
@@ -370,6 +370,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
     marginBottom: 10,
   },
   matiereIconBadge: {
@@ -399,7 +401,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 45,
+    paddingTop: 14,
     paddingBottom: 12,
     backgroundColor: COLORS.card,
     borderBottomWidth: 1,
@@ -432,7 +434,7 @@ const styles = StyleSheet.create({
   },
   questionContent: {
     padding: 16,
-    paddingBottom: 30,
+    paddingBottom: 80,
   },
   questionCard: {
     padding: 20,
