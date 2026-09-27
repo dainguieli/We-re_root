@@ -4,7 +4,6 @@ import {
   StyleSheet,
   View,
   StatusBar,
-  ActivityIndicator,
   TouchableOpacity,
   Text,
   Platform,
@@ -39,10 +38,8 @@ type ScreenType =
 function MainApp() {
   const {
     currentUser,
-    isLoading,
     activeSession,
     pendingRatingSession,
-    currentMode,
   } = useApp();
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('list');
@@ -50,14 +47,6 @@ function MainApp() {
   const [createMatiere, setCreateMatiere] = useState<string | undefined>(undefined);
   const [createRubrique, setCreateRubrique] = useState<string | undefined>(undefined);
   const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState<boolean>(false);
-
-  if (isLoading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
 
   // If no user exists, show register screen
   if (!currentUser) {
@@ -333,12 +322,6 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: COLORS.background,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
-  },
-  centerContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.background,
   },
   body: {
     flex: 1,
