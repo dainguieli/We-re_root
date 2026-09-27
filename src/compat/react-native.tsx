@@ -56,7 +56,9 @@ type StatusBarProps = {
   backgroundColor?: string;
 };
 
-export const StatusBar = (_props: StatusBarProps) => null;
+export const StatusBar = Object.assign((_props: StatusBarProps) => null, {
+  currentHeight: 0,
+});
 
 export const RefreshControl = (_props: Record<string, unknown>) => null;
 
