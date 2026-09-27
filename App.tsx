@@ -328,6 +328,8 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    minHeight: 0,
+    width: '100%',
     backgroundColor: COLORS.background,
   },
   centerContainer: {
@@ -338,6 +340,7 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
+    minHeight: 0,
   },
   tabBarContainer: {
     backgroundColor: COLORS.card,
