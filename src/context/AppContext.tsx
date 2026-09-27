@@ -7,6 +7,7 @@ import {
   ClasseType,
   RolePrefere,
   StatutTuteur,
+  ModeDemande,
   isEligibleToHelp,
 } from '../types';
 import matieresJson from '../data/matieres.json';
@@ -41,7 +42,9 @@ interface AppContextType {
     rubrique_custom?: string;
     photo_uri?: string;
     description?: string;
-    mode: 'ecrit' | 'video';
+    audio_uri?: string;
+    audio_duration_sec?: number;
+    mode: ModeDemande;
     presentiel: boolean;
     duree_proposee: number;
   }) => Promise<Demande>;
@@ -179,7 +182,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     rubrique_custom?: string;
     photo_uri?: string;
     description?: string;
-    mode: 'ecrit' | 'video';
+    audio_uri?: string;
+    audio_duration_sec?: number;
+    mode: ModeDemande;
     presentiel: boolean;
     duree_proposee: number;
   }): Promise<Demande> => {
@@ -196,6 +201,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       rubrique_custom: data.rubrique_custom,
       photo_uri: data.photo_uri,
       description: data.description,
+      audio_uri: data.audio_uri,
+      audio_duration_sec: data.audio_duration_sec,
       classe_demandeur: currentUser.classe,
       mode: data.mode,
       presentiel: data.presentiel,
@@ -218,6 +225,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!currentUser) throw new Error('Utilisateur non connecté');
     const targetDemande = demandes.find((d) => d.id === demandeId);
     if (!targetDemande) throw new Error('Demande introuvable');
+    if (targetDemande.statut !== 'ouverte') throw new Error('Cette demande a déjà été prise en charge');
 
     const creditsGain = calculateCreditsForMatiere(targetDemande.matiere, duree);
 
@@ -232,12 +240,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       matiere: targetDemande.matiere,
       mode: targetDemande.mode,
       lien_video: lienVideo || targetDemande.lien_video,
+      audio_uri: targetDemande.audio_uri,
       credits_verses: creditsGain,
       date: new Date().toISOString(),
       statut: 'en_cours',
     };
 
-    // Update demande status
+    // Update demande status to en_cours
     const updatedDemandes: Demande[] = demandes.map((d) =>
       d.id === demandeId
         ? {
@@ -404,7 +413,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Rule 3 & 5: Filtered requests for tutor
-  // 1. statut === 'ouverte'
+  // 1. statut === 'ouverte' STRICTLY (once answered or in-progress, never available)
   // 2. not created by the current user
   // 3. tutor validated the quiz for this subject
   // 4. requester class <= tutor class
@@ -418,7 +427,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     return demandes.filter((d) => {
-      // Must be open
+      // Must be strictly OPEN (not in progress, not answered/completed, not cancelled)
       if (d.statut !== 'ouverte') return false;
       // Cannot take own request
       if (d.auteur_id === currentUser.id) return false;

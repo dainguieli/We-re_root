@@ -15,6 +15,7 @@ import { COLORS, SHADOWS } from '../theme/colors';
 import { Badge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
+import { AudioPlayerWidget } from '../components/AudioWidget';
 import { Demande } from '../types';
 
 interface DemandeDetailScreenProps {
@@ -35,11 +36,10 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
     takeDemande,
     cancelDemande,
     calculateCreditsForMatiere,
-    activeSession,
   } = useApp();
 
   const [proposedDuration, setProposedDuration] = useState<number>(demande.duree_proposee);
-  const [videoLink, setVideoLink] = useState<string>('https://meet.google.com/abc-defg-hij');
+  const [videoLink, setVideoLink] = useState<string>('https://meet.google.com/linkup-aide');
   const [isTaking, setIsTaking] = useState<boolean>(false);
 
   if (!currentUser) return null;
@@ -48,13 +48,14 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
   const isTutorEligible =
     !isAuthor &&
     currentUser.quiz_valide_par_matiere[demande.matiere] &&
-    currentUser.statut_tuteur === 'actif';
+    currentUser.statut_tuteur === 'actif' &&
+    demande.statut === 'ouverte';
 
   const estimatedCredits = calculateCreditsForMatiere(demande.matiere, proposedDuration);
 
   const handleTakeDemande = async () => {
     if (demande.mode === 'video' && !videoLink.trim()) {
-      Alert.alert('Lien requis', "Veuillez fournir un lien d'appel vidéo (Meet, WhatsApp, etc.).");
+      Alert.alert('Lien requis', "Veuillez fournir un lien d'appel vidéo (Meet, WhatsApp, Jitsi).");
       return;
     }
 
@@ -66,8 +67,8 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
         `Tu aides maintenant ${demande.auteur_nom}. Vous avez ${proposedDuration} min pour cette session.`,
         [{ text: 'Accéder à la session', onPress: onSessionStarted }]
       );
-    } catch (e) {
-      Alert.alert('Erreur', 'Impossible de prendre en charge la demande.');
+    } catch (e: any) {
+      Alert.alert('Impossible de prendre en charge', e.message || 'Cette demande a déjà été prise en charge.');
     } finally {
       setIsTaking(false);
     }
@@ -92,164 +93,223 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {/* Top Bar */}
-      <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-        <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-        <Text style={styles.backText}>Retour aux demandes</Text>
-      </TouchableOpacity>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.responsiveWrapper}>
+        {/* Top Back Bar */}
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          <Text style={styles.backText}>Retour aux demandes</Text>
+        </TouchableOpacity>
 
-      {/* Main Card */}
-      <Card style={styles.mainCard}>
-        {/* Header Badges */}
-        <View style={styles.headerBadgesRow}>
-          <Badge label={demande.matiere} variant="primary" />
-          <Badge label={demande.rubrique} variant="neutral" />
-          <Badge
-            label={demande.mode === 'video' ? 'Appel Vidéo' : 'Message Écrit'}
-            variant="info"
-          />
-        </View>
-
-        <Text style={styles.authorTitle}>
-          Demande de {demande.auteur_nom}
-        </Text>
-
-        {/* Student meta info */}
-        <View style={styles.studentInfoBox}>
-          <View style={styles.studentInfoRow}>
-            <Ionicons name="school" size={16} color={COLORS.primary} />
-            <Text style={styles.studentInfoText}>
-              {demande.auteur_ecole} • Classe de {demande.classe_demandeur}
-            </Text>
-          </View>
-          {demande.presentiel && (
-            <View style={[styles.studentInfoRow, { marginTop: 4 }]}>
-              <Ionicons name="location" size={16} color={COLORS.secondary} />
-              <Text style={[styles.studentInfoText, { color: COLORS.secondary, fontWeight: '700' }]}>
-                Aide en présentiel requise (même établissement)
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Description */}
-        <Text style={styles.sectionHeading}>Question / Problème :</Text>
-        <Text style={styles.descriptionText}>
-          {demande.description || "Pas de description supplémentaire fournie."}
-        </Text>
-
-        {/* Attached Photo */}
-        {demande.photo_uri && (
-          <View style={styles.photoContainer}>
-            <Text style={styles.sectionHeading}>Photo de l'exercice :</Text>
-            <Image
-              source={{ uri: demande.photo_uri }}
-              style={styles.photo}
-              resizeMode="cover"
+        {/* Main Details Card */}
+        <Card style={styles.mainCard}>
+          {/* Header Badges */}
+          <View style={styles.headerBadgesRow}>
+            <Badge label={demande.matiere} variant="primary" />
+            <Badge label={demande.rubrique} variant="neutral" />
+            <Badge
+              label={demande.mode === 'audio' ? 'Message Audio' : 'Appel Vidéo'}
+              variant={demande.mode === 'audio' ? 'primary' : 'info'}
+              icon={
+                <Ionicons
+                  name={demande.mode === 'audio' ? 'mic' : 'videocam'}
+                  size={14}
+                  color={COLORS.primary}
+                />
+              }
+            />
+            <Badge
+              label={
+                demande.statut === 'ouverte'
+                  ? 'Disponible'
+                  : demande.statut === 'en_cours'
+                  ? 'En cours'
+                  : demande.statut === 'terminee'
+                  ? 'Terminée'
+                  : 'Annulée'
+              }
+              variant={
+                demande.statut === 'ouverte'
+                  ? 'accent'
+                  : demande.statut === 'en_cours'
+                  ? 'secondary'
+                  : 'neutral'
+              }
+              size="sm"
             />
           </View>
-        )}
-      </Card>
 
-      {/* ACTION SECTION FOR TUTOR */}
-      {demande.statut === 'ouverte' && isTutorEligible && (
-        <Card variant="highlight" style={styles.actionCard}>
-          <Text style={styles.actionCardTitle}>Proposer mon aide 🤝</Text>
-          <Text style={styles.actionCardSubtitle}>
-            Ajuste la durée estimée et prépare la session :
+          <Text style={styles.authorTitle}>
+            Demande de {demande.auteur_nom}
           </Text>
 
-          {/* Duration choices */}
-          <Text style={styles.fieldLabel}>Durée de la session :</Text>
-          <View style={styles.durationsRow}>
-            {DURATIONS.map((d) => {
-              const isSelected = proposedDuration === d;
-              return (
-                <TouchableOpacity
-                  key={d}
-                  onPress={() => setProposedDuration(d)}
-                  style={[
-                    styles.durationChip,
-                    isSelected && styles.durationChipSelected,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.durationChipText,
-                      isSelected && styles.durationChipTextSelected,
-                    ]}
-                  >
-                    {d} min
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          {/* Student meta info */}
+          <View style={styles.studentInfoBox}>
+            <View style={styles.studentInfoRow}>
+              <Ionicons name="school" size={16} color={COLORS.primary} />
+              <Text style={styles.studentInfoText}>
+                {demande.auteur_ecole} • Classe de {demande.classe_demandeur}
+              </Text>
+            </View>
+            {demande.presentiel && (
+              <View style={[styles.studentInfoRow, { marginTop: 4 }]}>
+                <Ionicons name="location" size={16} color={COLORS.secondary} />
+                <Text style={[styles.studentInfoText, { color: COLORS.secondary, fontWeight: '700' }]}>
+                  Aide en présentiel requise (même établissement)
+                </Text>
+              </View>
+            )}
           </View>
 
-          {/* Video link input if mode is video */}
-          {demande.mode === 'video' && (
-            <View style={{ marginTop: 12 }}>
-              <Text style={styles.fieldLabel}>Lien d'appel vidéo (Meet, WhatsApp, Jitsi) :</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="https://meet.google.com/..."
-                placeholderTextColor={COLORS.textMuted}
-                value={videoLink}
-                onChangeText={setVideoLink}
-                autoCapitalize="none"
+          {/* If Mode is AUDIO: Show Interactive Audio Player Widget */}
+          {demande.mode === 'audio' && (
+            <View style={styles.audioPlayerSection}>
+              <Text style={styles.sectionHeading}>Enregistrement vocal de l'élève :</Text>
+              <AudioPlayerWidget durationSec={demande.audio_duration_sec || 20} />
+            </View>
+          )}
+
+          {/* Text Description */}
+          {demande.description ? (
+            <View style={{ marginTop: 8 }}>
+              <Text style={styles.sectionHeading}>Détail de la question :</Text>
+              <Text style={styles.descriptionText}>{demande.description}</Text>
+            </View>
+          ) : null}
+
+          {/* Attached Photo */}
+          {demande.photo_uri && (
+            <View style={styles.photoContainer}>
+              <Text style={styles.sectionHeading}>Photo de l'exercice :</Text>
+              <Image
+                source={{ uri: demande.photo_uri }}
+                style={styles.photo}
+                resizeMode="cover"
               />
             </View>
           )}
+        </Card>
 
-          {/* Credit gain reminder */}
-          <View style={styles.creditsRewardRow}>
-            <Ionicons name="sparkles" size={20} color={COLORS.accent} />
-            <Text style={styles.creditsRewardText}>
-              Tu gagneras <Text style={{ fontWeight: '800' }}>+{estimatedCredits} crédits</Text> à la validation !
+        {/* =========================================================
+            ACTION SECTION FOR TUTOR (Only if request is OPEN)
+            ========================================================= */}
+        {demande.statut === 'ouverte' && isTutorEligible && (
+          <Card variant="highlight" style={styles.actionCard}>
+            <Text style={styles.actionCardTitle}>Prendre en charge cette demande 🤝</Text>
+            <Text style={styles.actionCardSubtitle}>
+              {demande.mode === 'audio'
+                ? "Écoute l'audio de l'élève ci-dessus puis confirme ton accompagnement :"
+                : "Prépare le lien vidéo pour démarrer l'appel avec l'élève :"}
             </Text>
-          </View>
 
-          <Button
-            title="✅ Prendre en charge la demande"
-            size="lg"
-            variant="secondary"
-            loading={isTaking}
-            onPress={handleTakeDemande}
-            style={{ marginTop: 14 }}
-          />
-        </Card>
-      )}
+            {/* Duration selector */}
+            <Text style={styles.fieldLabel}>Durée de la session :</Text>
+            <View style={styles.durationsRow}>
+              {DURATIONS.map((d) => {
+                const isSelected = proposedDuration === d;
+                return (
+                  <TouchableOpacity
+                    key={d}
+                    onPress={() => setProposedDuration(d)}
+                    style={[
+                      styles.durationChip,
+                      isSelected && styles.durationChipSelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.durationChipText,
+                        isSelected && styles.durationChipTextSelected,
+                      ]}
+                    >
+                      {d} min
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
-      {/* IF REQUEST IN PROGRESS */}
-      {demande.statut === 'en_cours' && (
-        <Card variant="flat" style={styles.inProgressCard}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Ionicons name="time" size={22} color={COLORS.secondary} style={{ marginRight: 6 }} />
-            <Text style={styles.inProgressTitle}>Session d'aide en cours</Text>
-          </View>
-          <Text style={styles.inProgressDesc}>
-            Aidant : {demande.aidant_nom || 'Attribué'}
-          </Text>
+            {/* Video link input if mode is video */}
+            {demande.mode === 'video' && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={styles.fieldLabel}>Lien d'appel vidéo (Meet, WhatsApp, Jitsi) :</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="https://meet.google.com/..."
+                  placeholderTextColor={COLORS.textMuted}
+                  value={videoLink}
+                  onChangeText={setVideoLink}
+                  autoCapitalize="none"
+                />
+              </View>
+            )}
+
+            {/* Credit reward info */}
+            <View style={styles.creditsRewardRow}>
+              <Ionicons name="sparkles" size={20} color={COLORS.accent} />
+              <Text style={styles.creditsRewardText}>
+                Tu gagneras <Text style={{ fontWeight: '800' }}>+{estimatedCredits} crédits</Text> à la fin de cette session !
+              </Text>
+            </View>
+
+            <Button
+              title={demande.mode === 'audio' ? "✅ Valider et démarrer l'entraide" : "📞 Démarrer la session vidéo"}
+              size="lg"
+              variant="secondary"
+              loading={isTaking}
+              onPress={handleTakeDemande}
+              style={{ marginTop: 14 }}
+            />
+          </Card>
+        )}
+
+        {/* IF REQUEST IS ALREADY IN PROGRESS */}
+        {demande.statut === 'en_cours' && (
+          <Card variant="flat" style={styles.inProgressCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Ionicons name="time" size={22} color={COLORS.secondary} style={{ marginRight: 6 }} />
+              <Text style={styles.inProgressTitle}>Session d'aide en cours</Text>
+            </View>
+            <Text style={styles.inProgressDesc}>
+              Tuteur accompagnateur : <Text style={{ fontWeight: '700' }}>{demande.aidant_nom || 'Attribué'}</Text>
+            </Text>
+            <Button
+              title="Accéder à l'écran de session active"
+              size="md"
+              onPress={onSessionStarted}
+              style={{ marginTop: 12 }}
+            />
+          </Card>
+        )}
+
+        {/* IF REQUEST IS ALREADY FINISHED */}
+        {demande.statut === 'terminee' && (
+          <Card variant="flat" style={styles.finishedCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Ionicons name="checkmark-circle" size={22} color={COLORS.primary} style={{ marginRight: 6 }} />
+              <Text style={styles.finishedTitle}>Demande clôturée</Text>
+            </View>
+            <Text style={styles.finishedDesc}>
+              Cette session a été terminée avec succès par {demande.aidant_nom || 'le tuteur'}.
+            </Text>
+          </Card>
+        )}
+
+        {/* IF CURRENT USER IS AUTHOR */}
+        {isAuthor && demande.statut === 'ouverte' && (
           <Button
-            title="Rejoindre l'écran de session active"
+            title="Annuler ma demande"
+            variant="danger"
             size="md"
-            onPress={onSessionStarted}
-            style={{ marginTop: 12 }}
+            onPress={handleCancel}
+            style={{ marginTop: 20 }}
           />
-        </Card>
-      )}
-
-      {/* IF CURRENT USER IS AUTHOR */}
-      {isAuthor && demande.statut === 'ouverte' && (
-        <Button
-          title="Annuler ma demande"
-          variant="danger"
-          size="md"
-          onPress={handleCancel}
-          style={{ marginTop: 20 }}
-        />
-      )}
+        )}
+      </View>
     </ScrollView>
   );
 };
@@ -259,9 +319,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  content: {
+  contentContainer: {
     padding: 16,
     paddingBottom: 40,
+  },
+  responsiveWrapper: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
   },
   backBtn: {
     flexDirection: 'row',
@@ -311,6 +376,9 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 6,
     marginTop: 8,
+  },
+  audioPlayerSection: {
+    marginVertical: 6,
   },
   descriptionText: {
     fontSize: 15,
@@ -413,6 +481,20 @@ const styles = StyleSheet.create({
     color: COLORS.secondary,
   },
   inProgressDesc: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  finishedCard: {
+    backgroundColor: COLORS.cardAlt,
+    padding: 16,
+    borderRadius: 16,
+  },
+  finishedTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  finishedDesc: {
     fontSize: 13,
     color: COLORS.textSecondary,
   },

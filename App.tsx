@@ -212,96 +212,98 @@ function MainApp() {
 
       {/* Bottom Tab Bar */}
       {showHeaderAndTabs && (
-        <View style={styles.tabBar}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setCurrentScreen('list')}
-            style={styles.tabItem}
-          >
-            <Ionicons
-              name={currentScreen === 'list' ? 'list' : 'list-outline'}
-              size={22}
-              color={currentScreen === 'list' ? COLORS.primary : COLORS.textSecondary}
-            />
-            <Text
-              style={[
-                styles.tabLabel,
-                currentScreen === 'list' && styles.tabLabelActive,
-              ]}
-            >
-              Demandes
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setCurrentScreen('quizzes')}
-            style={styles.tabItem}
-          >
-            <Ionicons
-              name={currentScreen === 'quizzes' ? 'ribbon' : 'ribbon-outline'}
-              size={22}
-              color={currentScreen === 'quizzes' ? COLORS.primary : COLORS.textSecondary}
-            />
-            <Text
-              style={[
-                styles.tabLabel,
-                currentScreen === 'quizzes' && styles.tabLabelActive,
-              ]}
-            >
-              Quiz Tuteur
-            </Text>
-          </TouchableOpacity>
-
-          {/* Center Create Action */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setCurrentScreen('create')}
-            style={styles.centerFabTab}
-          >
-            <View style={styles.fabCircle}>
-              <Ionicons name="add" size={28} color="#FFFFFF" />
-            </View>
-            <Text style={styles.fabLabel}>Poser</Text>
-          </TouchableOpacity>
-
-          {/* Active Session tab if running */}
-          {activeSession && (
+        <View style={styles.tabBarContainer}>
+          <View style={styles.tabBar}>
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => setCurrentScreen('session')}
+              onPress={() => setCurrentScreen('list')}
               style={styles.tabItem}
             >
               <Ionicons
-                name="stopwatch"
+                name={currentScreen === 'list' ? 'list' : 'list-outline'}
                 size={22}
-                color={COLORS.secondary}
+                color={currentScreen === 'list' ? COLORS.primary : COLORS.textSecondary}
               />
-              <Text style={[styles.tabLabel, { color: COLORS.secondary, fontWeight: '700' }]}>
-                Session
+              <Text
+                style={[
+                  styles.tabLabel,
+                  currentScreen === 'list' && styles.tabLabelActive,
+                ]}
+              >
+                Demandes
               </Text>
             </TouchableOpacity>
-          )}
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setCurrentScreen('profile')}
-            style={styles.tabItem}
-          >
-            <Ionicons
-              name={currentScreen === 'profile' ? 'person' : 'person-outline'}
-              size={22}
-              color={currentScreen === 'profile' ? COLORS.primary : COLORS.textSecondary}
-            />
-            <Text
-              style={[
-                styles.tabLabel,
-                currentScreen === 'profile' && styles.tabLabelActive,
-              ]}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setCurrentScreen('quizzes')}
+              style={styles.tabItem}
             >
-              Profil
-            </Text>
-          </TouchableOpacity>
+              <Ionicons
+                name={currentScreen === 'quizzes' ? 'ribbon' : 'ribbon-outline'}
+                size={22}
+                color={currentScreen === 'quizzes' ? COLORS.primary : COLORS.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.tabLabel,
+                  currentScreen === 'quizzes' && styles.tabLabelActive,
+                ]}
+              >
+                Quiz Tuteur
+              </Text>
+            </TouchableOpacity>
+
+            {/* Center Create Action */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => handleOpenCreate()}
+              style={styles.centerFabTab}
+            >
+              <View style={styles.fabCircle}>
+                <Ionicons name="add" size={28} color="#FFFFFF" />
+              </View>
+              <Text style={styles.fabLabel}>Poser</Text>
+            </TouchableOpacity>
+
+            {/* Active Session tab if running */}
+            {activeSession && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setCurrentScreen('session')}
+                style={styles.tabItem}
+              >
+                <Ionicons
+                  name="stopwatch"
+                  size={22}
+                  color={COLORS.secondary}
+                />
+                <Text style={[styles.tabLabel, { color: COLORS.secondary, fontWeight: '700' }]}>
+                  Session
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setCurrentScreen('profile')}
+              style={styles.tabItem}
+            >
+              <Ionicons
+                name={currentScreen === 'profile' ? 'person' : 'person-outline'}
+                size={22}
+                color={currentScreen === 'profile' ? COLORS.primary : COLORS.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.tabLabel,
+                  currentScreen === 'profile' && styles.tabLabelActive,
+                ]}
+              >
+                Profil
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -337,16 +339,21 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
   },
-  tabBar: {
-    flexDirection: 'row',
+  tabBarContainer: {
     backgroundColor: COLORS.card,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+    ...SHADOWS.md,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     paddingVertical: 6,
     paddingBottom: 10,
     alignItems: 'center',
     justifyContent: 'space-around',
-    ...SHADOWS.md,
   },
   tabItem: {
     alignItems: 'center',

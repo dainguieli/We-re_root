@@ -257,68 +257,70 @@ export const TutorOnboardingScreen: React.FC<TutorOnboardingScreenProps> = ({ on
 
   // SUBJECT SELECTION LIST VIEW
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.introHeader}>
-        <Text style={styles.mainTitle}>Certification Aidant 🎓</Text>
-        <Text style={styles.mainDesc}>
-          Pour garantir des explications fiables, valide un court quiz de 3 questions (niveau {targetLevel}) sur chaque matière que tu souhaites débloquer.
-        </Text>
-      </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.responsiveWrapper}>
+        <View style={styles.introHeader}>
+          <Text style={styles.mainTitle}>Certification Aidant 🎓</Text>
+          <Text style={styles.mainDesc}>
+            Pour garantir des explications fiables, valide un court quiz de 3 questions (niveau {targetLevel}) sur chaque matière que tu souhaites débloquer.
+          </Text>
+        </View>
 
-      <View style={styles.matieresGrid}>
-        {matieres.map((mat) => {
-          const isValidated = !!currentUser.quiz_valide_par_matiere[mat.nom];
-          const isHighValue = mat.coefficient > 1.0;
+        <View style={styles.matieresGrid}>
+          {matieres.map((mat) => {
+            const isValidated = !!currentUser.quiz_valide_par_matiere[mat.nom];
+            const isHighValue = mat.coefficient > 1.0;
 
-          return (
-            <Card
-              key={mat.id}
-              style={[
-                styles.matiereCard,
-                isValidated ? styles.matiereCardValidated : undefined,
-              ]}
-            >
-              <View style={styles.matiereTopRow}>
-                <View style={[styles.matiereIconBadge, { backgroundColor: mat.color + '20' }]}>
-                  <Ionicons name="book" size={20} color={mat.color} />
+            return (
+              <Card
+                key={mat.id}
+                style={[
+                  styles.matiereCard,
+                  isValidated ? styles.matiereCardValidated : undefined,
+                ]}
+              >
+                <View style={styles.matiereTopRow}>
+                  <View style={[styles.matiereIconBadge, { backgroundColor: mat.color + '20' }]}>
+                    <Ionicons name="book" size={20} color={mat.color} />
+                  </View>
+                  <View style={styles.badgeGroup}>
+                    {isHighValue && (
+                      <Badge label="x1.5 crédits" variant="accent" size="sm" />
+                    )}
+                    {isValidated ? (
+                      <Badge label="Validé ✓" variant="secondary" size="sm" />
+                    ) : (
+                      <Badge label="À valider" variant="neutral" size="sm" />
+                    )}
+                  </View>
                 </View>
-                <View style={styles.badgeGroup}>
-                  {isHighValue && (
-                    <Badge label="x1.5 crédits" variant="accent" size="sm" />
-                  )}
+
+                <Text style={styles.matiereName}>{mat.nom}</Text>
+                <Text style={styles.matiereRubriquesText}>
+                  {mat.rubriques.slice(0, 3).join(', ')}...
+                </Text>
+
+                <View style={{ marginTop: 12 }}>
                   {isValidated ? (
-                    <Badge label="Validé ✓" variant="secondary" size="sm" />
+                    <Button
+                      title="Rejouer le quiz"
+                      variant="outline"
+                      size="sm"
+                      onPress={() => startQuiz(mat.nom)}
+                    />
                   ) : (
-                    <Badge label="À valider" variant="neutral" size="sm" />
+                    <Button
+                      title={`Passer le quiz (${targetLevel})`}
+                      variant="primary"
+                      size="sm"
+                      onPress={() => startQuiz(mat.nom)}
+                    />
                   )}
                 </View>
-              </View>
-
-              <Text style={styles.matiereName}>{mat.nom}</Text>
-              <Text style={styles.matiereRubriquesText}>
-                {mat.rubriques.slice(0, 3).join(', ')}...
-              </Text>
-
-              <View style={{ marginTop: 12 }}>
-                {isValidated ? (
-                  <Button
-                    title="Rejouer le quiz"
-                    variant="outline"
-                    size="sm"
-                    onPress={() => startQuiz(mat.nom)}
-                  />
-                ) : (
-                  <Button
-                    title={`Passer le quiz (${targetLevel})`}
-                    variant="primary"
-                    size="sm"
-                    onPress={() => startQuiz(mat.nom)}
-                  />
-                )}
-              </View>
-            </Card>
-          );
-        })}
+              </Card>
+            );
+          })}
+        </View>
       </View>
     </ScrollView>
   );
@@ -332,6 +334,11 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 40,
+  },
+  responsiveWrapper: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
   },
   introHeader: {
     marginBottom: 20,

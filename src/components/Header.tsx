@@ -20,106 +20,108 @@ export const Header: React.FC<HeaderProps> = ({ onOpenUserSwitch, onOpenProfile 
 
   return (
     <View style={styles.container}>
-      {/* Top row: Brand + Credits + Profile Avatar */}
-      <View style={styles.topRow}>
-        <View style={styles.brandRow}>
-          <View style={styles.logoCircle}>
-            <Ionicons name="school" size={20} color={COLORS.primary} />
-          </View>
-          <View>
-            <Text style={styles.brandTitle}>LinkUp</Text>
-            <Text style={styles.brandSubtitle}>Tutorat entre pairs</Text>
-          </View>
-        </View>
-
-        <View style={styles.rightActions}>
-          {/* Credits pill */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={onOpenProfile}
-            style={styles.creditsPill}
-          >
-            <Ionicons name="sparkles" size={16} color={COLORS.accent} />
-            <Text style={styles.creditsText}>{currentUser.credits} pts</Text>
-          </TouchableOpacity>
-
-          {/* User selector avatar */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={onOpenUserSwitch}
-            style={styles.userButton}
-          >
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {currentUser.nom.charAt(0).toUpperCase()}
-              </Text>
+      <View style={styles.responsiveWrapper}>
+        {/* Top row: Brand + Credits + Profile Avatar */}
+        <View style={styles.topRow}>
+          <View style={styles.brandRow}>
+            <View style={styles.logoCircle}>
+              <Ionicons name="school" size={20} color={COLORS.primary} />
             </View>
-            <Ionicons name="chevron-down" size={14} color={COLORS.textSecondary} />
+            <View>
+              <Text style={styles.brandTitle}>LinkUp</Text>
+              <Text style={styles.brandSubtitle}>Tutorat entre pairs</Text>
+            </View>
+          </View>
+
+          <View style={styles.rightActions}>
+            {/* Credits pill */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onOpenProfile}
+              style={styles.creditsPill}
+            >
+              <Ionicons name="sparkles" size={16} color={COLORS.accent} />
+              <Text style={styles.creditsText}>{currentUser.credits} pts</Text>
+            </TouchableOpacity>
+
+            {/* User selector avatar */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onOpenUserSwitch}
+              style={styles.userButton}
+            >
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {currentUser.nom.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <Ionicons name="chevron-down" size={14} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* User Info Bar */}
+        <View style={styles.userInfoRow}>
+          <View style={styles.userBadges}>
+            <Text style={styles.userName}>{currentUser.nom}</Text>
+            <Badge label={currentUser.classe} variant="primary" size="sm" />
+            <Badge label={currentUser.ecole} variant="neutral" size="sm" />
+            {isSuspended && (
+              <Badge label="Tuteur suspendu" variant="danger" size="sm" />
+            )}
+          </View>
+        </View>
+
+        {/* Mode Switcher Tab (Aide vs Besoin) */}
+        <View style={styles.modeSwitcherContainer}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setCurrentMode('besoin')}
+            style={[
+              styles.modeTab,
+              !isTutorMode && styles.modeTabActiveBesoin,
+            ]}
+          >
+            <Ionicons
+              name="help-circle"
+              size={18}
+              color={!isTutorMode ? '#FFFFFF' : COLORS.textSecondary}
+              style={{ marginRight: 6 }}
+            />
+            <Text
+              style={[
+                styles.modeTabText,
+                !isTutorMode ? styles.modeTabTextActive : styles.modeTabTextInactive,
+              ]}
+            >
+              J'ai besoin d'aide
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setCurrentMode('aide')}
+            style={[
+              styles.modeTab,
+              isTutorMode && styles.modeTabActiveAide,
+            ]}
+          >
+            <Ionicons
+              name="heart-half"
+              size={18}
+              color={isTutorMode ? '#FFFFFF' : COLORS.textSecondary}
+              style={{ marginRight: 6 }}
+            />
+            <Text
+              style={[
+                styles.modeTabText,
+                isTutorMode ? styles.modeTabTextActive : styles.modeTabTextInactive,
+              ]}
+            >
+              Je veux aider
+            </Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* User Info Bar */}
-      <View style={styles.userInfoRow}>
-        <View style={styles.userBadges}>
-          <Text style={styles.userName}>{currentUser.nom}</Text>
-          <Badge label={currentUser.classe} variant="primary" size="sm" />
-          <Badge label={currentUser.ecole} variant="neutral" size="sm" />
-          {isSuspended && (
-            <Badge label="Tuteur suspendu" variant="danger" size="sm" />
-          )}
-        </View>
-      </View>
-
-      {/* Mode Switcher Tab (Aide vs Besoin) */}
-      <View style={styles.modeSwitcherContainer}>
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => setCurrentMode('besoin')}
-          style={[
-            styles.modeTab,
-            !isTutorMode && styles.modeTabActiveBesoin,
-          ]}
-        >
-          <Ionicons
-            name="help-circle"
-            size={18}
-            color={!isTutorMode ? '#FFFFFF' : COLORS.textSecondary}
-            style={{ marginRight: 6 }}
-          />
-          <Text
-            style={[
-              styles.modeTabText,
-              !isTutorMode ? styles.modeTabTextActive : styles.modeTabTextInactive,
-            ]}
-          >
-            J'ai besoin d'aide
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => setCurrentMode('aide')}
-          style={[
-            styles.modeTab,
-            isTutorMode && styles.modeTabActiveAide,
-          ]}
-        >
-          <Ionicons
-            name="heart-half"
-            size={18}
-            color={isTutorMode ? '#FFFFFF' : COLORS.textSecondary}
-            style={{ marginRight: 6 }}
-          />
-          <Text
-            style={[
-              styles.modeTabText,
-              isTutorMode ? styles.modeTabTextActive : styles.modeTabTextInactive,
-            ]}
-          >
-            Je veux aider
-          </Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -134,6 +136,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 12,
     ...SHADOWS.sm,
+  },
+  responsiveWrapper: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
   },
   topRow: {
     flexDirection: 'row',

@@ -55,7 +55,7 @@ export interface MatiereConfig {
   rubriques: string[];
 }
 
-export type ModeDemande = 'ecrit' | 'video';
+export type ModeDemande = 'audio' | 'video';
 export type StatutDemande = 'ouverte' | 'en_cours' | 'terminee' | 'annulee';
 
 export interface Demande {
@@ -69,6 +69,8 @@ export interface Demande {
   rubrique_custom?: string;
   photo_uri?: string;
   description?: string;
+  audio_uri?: string;
+  audio_duration_sec?: number;
   classe_demandeur: ClasseType;
   mode: ModeDemande;
   presentiel: boolean; // filtre = meme ecole obligatoire si true
@@ -92,6 +94,7 @@ export interface Session {
   matiere: string;
   mode: ModeDemande;
   lien_video?: string;
+  audio_uri?: string;
   credits_verses: number;
   note_recue?: number; // 1-5
   commentaire?: string;

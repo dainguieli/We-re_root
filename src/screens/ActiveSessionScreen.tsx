@@ -14,6 +14,7 @@ import { COLORS, SHADOWS } from '../theme/colors';
 import { Badge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
+import { AudioPlayerWidget } from '../components/AudioWidget';
 
 interface ActiveSessionScreenProps {
   onSessionEnded: () => void;
@@ -24,7 +25,7 @@ export const ActiveSessionScreen: React.FC<ActiveSessionScreenProps> = ({
   onSessionEnded,
   onBack,
 }) => {
-  const { activeSession, completeSession, currentUser } = useApp();
+  const { activeSession, completeSession } = useApp();
 
   const [secondsRemaining, setSecondsRemaining] = useState<number>(
     activeSession ? activeSession.duree_min * 60 : 15 * 60
@@ -82,9 +83,9 @@ export const ActiveSessionScreen: React.FC<ActiveSessionScreenProps> = ({
   const handleFinishSession = () => {
     Alert.alert(
       'Terminer la session',
-      `Confirmez-vous la fin de cette session d'aide ?\n+${activeSession.credits_verses} crédits seront versés à l'aidant (${activeSession.aidant_nom}).`,
+      `Confirmez-vous la fin de cette session d'entraide ?\n+${activeSession.credits_verses} crédits seront versés à l'aidant (${activeSession.aidant_nom}).`,
       [
-        { text: 'Continuer la session', style: 'cancel' },
+        { text: 'Poursuivre la session', style: 'cancel' },
         {
           text: 'Oui, terminer',
           onPress: async () => {
@@ -104,110 +105,131 @@ export const ActiveSessionScreen: React.FC<ActiveSessionScreenProps> = ({
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Top Header */}
-      <View style={styles.topHeader}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-          <Text style={styles.backText}>Réduire</Text>
-        </TouchableOpacity>
-        <Badge label="SESSION EN COURS" variant="secondary" />
-      </View>
-
-      {/* Main Timer Card */}
-      <Card style={styles.timerCard}>
-        <View style={styles.subjectRow}>
-          <Badge label={activeSession.matiere} variant="primary" size="sm" />
-          <Badge
-            label={activeSession.mode === 'video' ? 'Appel Vidéo' : 'Écrit'}
-            variant="info"
-            size="sm"
-          />
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.responsiveWrapper}>
+        {/* Top Header */}
+        <View style={styles.topHeader}>
+          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+            <Text style={styles.backText}>Réduire</Text>
+          </TouchableOpacity>
+          <Badge label="SESSION EN COURS" variant="secondary" />
         </View>
 
-        <Text style={styles.timerTitle}>Temps restant estimé</Text>
-        <Text style={styles.timerDigits}>{formatTime(secondsRemaining)}</Text>
-
-        <View style={styles.timerControlsRow}>
-          <TouchableOpacity
-            onPress={() => setIsActive(!isActive)}
-            style={styles.controlBtn}
-          >
-            <Ionicons
-              name={isActive ? 'pause' : 'play'}
-              size={18}
-              color={COLORS.text}
+        {/* Main Timer Card */}
+        <Card style={styles.timerCard}>
+          <View style={styles.subjectRow}>
+            <Badge label={activeSession.matiere} variant="primary" size="sm" />
+            <Badge
+              label={activeSession.mode === 'audio' ? 'Message Audio' : 'Appel Vidéo'}
+              variant={activeSession.mode === 'audio' ? 'primary' : 'info'}
+              icon={
+                <Ionicons
+                  name={activeSession.mode === 'audio' ? 'mic' : 'videocam'}
+                  size={13}
+                  color={COLORS.primary}
+                />
+              }
+              size="sm"
             />
-            <Text style={styles.controlBtnText}>{isActive ? 'Pause' : 'Reprendre'}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setSecondsRemaining(activeSession.duree_min * 60)}
-            style={styles.controlBtn}
-          >
-            <Ionicons name="refresh" size={18} color={COLORS.text} />
-            <Text style={styles.controlBtnText}>Réinitialiser</Text>
-          </TouchableOpacity>
-        </View>
-      </Card>
-
-      {/* Participants Card */}
-      <Card style={styles.participantsCard}>
-        <Text style={styles.cardHeading}>Participants</Text>
-
-        <View style={styles.participantRow}>
-          <View style={[styles.avatarCircle, { backgroundColor: COLORS.secondary }]}>
-            <Ionicons name="shield-checkmark" size={18} color="#FFFFFF" />
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.participantRole}>Tuteur / Aidant</Text>
-            <Text style={styles.participantName}>{activeSession.aidant_nom}</Text>
-          </View>
-          <Badge label={`+${activeSession.credits_verses} pts`} variant="accent" size="sm" />
-        </View>
 
-        <View style={[styles.participantRow, { marginTop: 12 }]}>
-          <View style={[styles.avatarCircle, { backgroundColor: COLORS.primary }]}>
-            <Ionicons name="school" size={18} color="#FFFFFF" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.participantRole}>Demandeur / Élève</Text>
-            <Text style={styles.participantName}>{activeSession.demandeur_nom}</Text>
-          </View>
-        </View>
-      </Card>
+          <Text style={styles.timerTitle}>Temps restant estimé</Text>
+          <Text style={styles.timerDigits}>{formatTime(secondsRemaining)}</Text>
 
-      {/* Video Call Action if applicable */}
-      {activeSession.mode === 'video' && (
-        <Card variant="highlight" style={styles.videoCard}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-            <Ionicons name="videocam" size={22} color={COLORS.primary} style={{ marginRight: 8 }} />
-            <Text style={styles.videoCardTitle}>Lien d'appel externe</Text>
+          <View style={styles.timerControlsRow}>
+            <TouchableOpacity
+              onPress={() => setIsActive(!isActive)}
+              style={styles.controlBtn}
+            >
+              <Ionicons
+                name={isActive ? 'pause' : 'play'}
+                size={18}
+                color={COLORS.text}
+              />
+              <Text style={styles.controlBtnText}>{isActive ? 'Pause' : 'Reprendre'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setSecondsRemaining(activeSession.duree_min * 60)}
+              style={styles.controlBtn}
+            >
+              <Ionicons name="refresh" size={18} color={COLORS.text} />
+              <Text style={styles.controlBtnText}>Réinitialiser</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.videoCardDesc} numberOfLines={1}>
-            {activeSession.lien_video || 'Meet / WhatsApp'}
-          </Text>
-          <Button
-            title="📞 Ouvrir l'appel vidéo"
-            size="md"
-            onPress={handleOpenVideo}
-            style={{ marginTop: 10 }}
-          />
         </Card>
-      )}
 
-      {/* Complete Session Button */}
-      <View style={styles.footer}>
-        <Button
-          title="🏁 Marquer la session comme terminée"
-          size="lg"
-          variant="secondary"
-          loading={isFinishing}
-          onPress={handleFinishSession}
-        />
-        <Text style={styles.footerTip}>
-          Les crédits seront automatiquement attribués au tuteur et vous pourrez laisser une évaluation.
-        </Text>
+        {/* Participants Card */}
+        <Card style={styles.participantsCard}>
+          <Text style={styles.cardHeading}>Participants</Text>
+
+          <View style={styles.participantRow}>
+            <View style={[styles.avatarCircle, { backgroundColor: COLORS.secondary }]}>
+              <Ionicons name="shield-checkmark" size={18} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.participantRole}>Tuteur / Aidant</Text>
+              <Text style={styles.participantName}>{activeSession.aidant_nom}</Text>
+            </View>
+            <Badge label={`+${activeSession.credits_verses} pts`} variant="accent" size="sm" />
+          </View>
+
+          <View style={[styles.participantRow, { marginTop: 12 }]}>
+            <View style={[styles.avatarCircle, { backgroundColor: COLORS.primary }]}>
+              <Ionicons name="school" size={18} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.participantRole}>Demandeur / Élève</Text>
+              <Text style={styles.participantName}>{activeSession.demandeur_nom}</Text>
+            </View>
+          </View>
+        </Card>
+
+        {/* Audio Message Player if session is Audio */}
+        {activeSession.mode === 'audio' && (
+          <Card variant="flat" style={styles.audioSessionCard}>
+            <Text style={styles.audioSessionTitle}>Échange Audio de l'entraide :</Text>
+            <AudioPlayerWidget durationSec={24} />
+          </Card>
+        )}
+
+        {/* Video Call Action if session is Video */}
+        {activeSession.mode === 'video' && (
+          <Card variant="highlight" style={styles.videoCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Ionicons name="videocam" size={22} color={COLORS.primary} style={{ marginRight: 8 }} />
+              <Text style={styles.videoCardTitle}>Lien d'appel vidéo externe</Text>
+            </View>
+            <Text style={styles.videoCardDesc} numberOfLines={1}>
+              {activeSession.lien_video || 'Meet / WhatsApp / Jitsi'}
+            </Text>
+            <Button
+              title="📞 Ouvrir l'appel vidéo"
+              size="md"
+              onPress={handleOpenVideo}
+              style={{ marginTop: 10 }}
+            />
+          </Card>
+        )}
+
+        {/* Complete Session Button */}
+        <View style={styles.footer}>
+          <Button
+            title="🏁 Marquer la session comme terminée"
+            size="lg"
+            variant="secondary"
+            loading={isFinishing}
+            onPress={handleFinishSession}
+          />
+          <Text style={styles.footerTip}>
+            Les crédits seront automatiquement versés au tuteur et une notation sera demandée.
+          </Text>
+        </View>
       </View>
     </ScrollView>
   );
@@ -218,9 +240,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  content: {
+  contentContainer: {
     padding: 16,
     paddingBottom: 40,
+  },
+  responsiveWrapper: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
   },
   emptyContainer: {
     flex: 1,
@@ -323,6 +350,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: COLORS.text,
+  },
+  audioSessionCard: {
+    padding: 14,
+    marginBottom: 16,
+  },
+  audioSessionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 6,
   },
   videoCard: {
     padding: 16,

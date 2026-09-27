@@ -76,23 +76,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {onBack && (
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-          <Text style={styles.backText}>Retour</Text>
-        </TouchableOpacity>
-      )}
+      <View style={styles.responsiveWrapper}>
+        {onBack && (
+          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+            <Text style={styles.backText}>Retour</Text>
+          </TouchableOpacity>
+        )}
 
-      {/* User Header Profile Card */}
-      <Card style={styles.profileHeaderCard}>
-        <View style={styles.profileTopRow}>
-          <View style={styles.bigAvatar}>
-            <Text style={styles.bigAvatarText}>
-              {currentUser.nom.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.profileName}>{currentUser.nom}</Text>
+        {/* User Header Profile Card */}
+        <Card style={styles.profileHeaderCard}>
+          <View style={styles.profileTopRow}>
+            <View style={styles.bigAvatar}>
+              <Text style={styles.bigAvatarText}>
+                {currentUser.nom.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.profileName}>{currentUser.nom}</Text>
             <Text style={styles.profileSchool}>{currentUser.ecole}</Text>
             <View style={styles.profileBadgesRow}>
               <Badge label={`Classe : ${currentUser.classe}`} variant="primary" size="sm" />
@@ -290,6 +291,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           onPress={handleReset}
         />
       </Card>
+      </View>
     </ScrollView>
   );
 };
@@ -302,6 +304,11 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 40,
+  },
+  responsiveWrapper: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
   },
   backBtn: {
     flexDirection: 'row',

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
@@ -14,7 +15,7 @@ import { COLORS, SHADOWS } from '../theme/colors';
 import { Badge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
-import { Demande, MatiereConfig } from '../types';
+import { Demande, MatiereConfig, StatutDemande } from '../types';
 
 interface DemandesListScreenProps {
   onSelectDemande: (demande: Demande) => void;
@@ -23,12 +24,16 @@ interface DemandesListScreenProps {
 }
 
 type SortOrder = 'recent' | 'duration_asc' | 'duration_desc';
+type RequesterTab = 'matieres' | 'history';
 
 export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
   onSelectDemande,
   onCreateDemande,
   onOpenTutorQuizzes,
 }) => {
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width >= 768;
+
   const {
     currentUser,
     currentMode,
@@ -48,25 +53,40 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
+  // Requester Sub-tab: "Parcourir par matière" vs "Historique de mes requêtes"
+  const [requesterTab, setRequesterTab] = useState<RequesterTab>('matieres');
+  const [historyStatusFilter, setHistoryStatusFilter] = useState<string>('all');
+
   if (!currentUser) return null;
 
   const isTutorMode = currentMode === 'aide';
   const isSuspended = currentUser.statut_tuteur === 'suspendu';
 
-  // Base list of questions based on mode
-  let baseDemandes: Demande[] = [];
+  // Rule: ONLY open requests are available for tutors. Answered/In-progress requests are strictly hidden.
+  let availableTutorDemandes: Demande[] = [];
   if (isTutorMode) {
-    baseDemandes = getFilteredDemandesForCurrentUser();
-  } else {
-    baseDemandes = demandes.filter((d) => d.auteur_id === currentUser.id);
+    availableTutorDemandes = getFilteredDemandesForCurrentUser();
   }
 
-  // Count questions per subject
+  // Requester's submitted requests history
+  const mySubmittedDemandes: Demande[] = demandes.filter(
+    (d) => d.auteur_id === currentUser.id
+  );
+
+  // Count questions per subject (strictly open for tutor, all for requester)
   const getQuestionCountForMatiere = (matiereNom: string): number => {
-    if (matiereNom === 'all') return baseDemandes.length;
-    return baseDemandes.filter(
-      (d) => d.matiere.toLowerCase() === matiereNom.toLowerCase()
-    ).length;
+    if (isTutorMode) {
+      if (matiereNom === 'all') return availableTutorDemandes.length;
+      return availableTutorDemandes.filter(
+        (d) => d.matiere.toLowerCase() === matiereNom.toLowerCase()
+      ).length;
+    } else {
+      const openRequests = demandes.filter((d) => d.statut === 'ouverte');
+      if (matiereNom === 'all') return openRequests.length;
+      return openRequests.filter(
+        (d) => d.matiere.toLowerCase() === matiereNom.toLowerCase()
+      ).length;
+    }
   };
 
   const currentMatiereObj: MatiereConfig | undefined = matieres.find(
@@ -74,7 +94,9 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
   );
 
   // Filtered list in "Vue des questions"
-  let questionsList = baseDemandes;
+  let questionsList = isTutorMode
+    ? availableTutorDemandes
+    : demandes.filter((d) => d.statut === 'ouverte');
 
   if (selectedMatiereNom && selectedMatiereNom !== 'all') {
     questionsList = questionsList.filter(
@@ -113,6 +135,15 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
     );
   }
 
+  // Filtered submitted history list
+  let displayedHistory = mySubmittedDemandes;
+  if (historyStatusFilter !== 'all') {
+    displayedHistory = displayedHistory.filter((d) => d.statut === historyStatusFilter);
+  }
+  displayedHistory.sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
   const validatedSubjects = Object.entries(currentUser.quiz_valide_par_matiere)
     .filter(([_, val]) => val)
     .map(([key]) => key);
@@ -132,18 +163,15 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
     return `Il y a ${Math.floor(diffHours / 24)}j`;
   };
 
-  // ==========================================
-  // VIEW 1: CHOIX DE LA MATIÈRE (Diagram Block 1)
-  // ==========================================
-  if (selectedMatiereNom === null) {
-    return (
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Active Session Alert Banner */}
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.responsiveWrapper}>
+        {/* Active Session Alert Banner if one is running */}
         {activeSession && (
           <TouchableOpacity
             activeOpacity={0.8}
@@ -174,7 +202,7 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
               <Text style={styles.suspendedTitle}>Compte Tuteur Suspendu</Text>
             </View>
             <Text style={styles.suspendedDesc}>
-              Suite à des évaluations insuffisantes (note moyenne &lt; 2.5 ou plusieurs avis négatifs), ton profil tuteur est temporairement suspendu.
+              Suite à des évaluations insuffisantes (note moyenne &lt; 2.5 ou avis négatifs répétés), ton profil tuteur est temporairement suspendu.
             </Text>
           </Card>
         )}
@@ -187,7 +215,7 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
               <Text style={styles.noQuizTitle}>Débloque tes matières d'entraide</Text>
             </View>
             <Text style={styles.noQuizDesc}>
-              Pour voir et accepter les demandes d'élèves, valide le mini-quiz de 3 questions (niveau inférieur à {currentUser.classe}).
+              Pour voir et accepter les demandes d'élèves, valide le mini-quiz de 3 questions (niveau inférieur à ta classe {currentUser.classe}).
             </Text>
             <Button
               title="Passer mes quiz tuteur"
@@ -198,419 +226,594 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
           </Card>
         )}
 
-        {/* Section Header */}
-        <View style={styles.stepHeaderBox}>
-          <View style={styles.stepBadge}>
-            <Text style={styles.stepBadgeText}>Étape 1</Text>
-          </View>
-          <Text style={styles.mainStepTitle}>Choix de la matière 📚</Text>
-          <Text style={styles.mainStepSubtitle}>
-            {isTutorMode
-              ? 'Sélectionne une matière pour voir les élèves que tu peux aider :'
-              : 'Sélectionne une matière pour consulter ou poser tes questions :'}
-          </Text>
-        </View>
-
-        {/* "Voir toutes les questions" Quick Card */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => {
-            setSelectedMatiereNom('all');
-            setSelectedRubrique('all');
-          }}
-          style={styles.allSubjectsCard}
-        >
-          <View style={styles.allSubjectsLeft}>
-            <View style={styles.allSubjectsIcon}>
-              <Ionicons name="apps" size={22} color={COLORS.primary} />
-            </View>
-            <View>
-              <Text style={styles.allSubjectsTitle}>Toutes les matières confondues</Text>
-              <Text style={styles.allSubjectsSub}>
-                {baseDemandes.length} demande{baseDemandes.length > 1 ? 's' : ''} au total
-              </Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
-        </TouchableOpacity>
-
-        {/* Grid of Matieres */}
-        <View style={styles.matieresGrid}>
-          {matieres.map((mat) => {
-            const count = getQuestionCountForMatiere(mat.nom);
-            const isValidated = !!currentUser.quiz_valide_par_matiere[mat.nom];
-            const isHighCoeff = mat.coefficient > 1.0;
-
-            return (
-              <TouchableOpacity
-                key={mat.id}
-                activeOpacity={0.8}
-                onPress={() => {
-                  setSelectedMatiereNom(mat.nom);
-                  setSelectedRubrique('all');
-                }}
-                style={[
-                  styles.matiereSelectCard,
-                  isTutorMode && isValidated && styles.matiereCardTutorValid,
-                ]}
-              >
-                <View style={styles.matiereCardHeader}>
-                  <View style={[styles.matiereCardIcon, { backgroundColor: mat.color + '20' }]}>
-                    <Ionicons name="book" size={22} color={mat.color} />
-                  </View>
-                  <View style={styles.cardBadgesGroup}>
-                    {isHighCoeff && (
-                      <Badge label="x1.5" variant="accent" size="sm" />
-                    )}
-                    {isTutorMode && (
-                      <Badge
-                        label={isValidated ? 'Certifié ✓' : 'Non certifié'}
-                        variant={isValidated ? 'secondary' : 'neutral'}
-                        size="sm"
-                      />
-                    )}
-                  </View>
-                </View>
-
-                <Text style={styles.matiereCardName}>{mat.nom}</Text>
-                <Text style={styles.matiereCardRubriques} numberOfLines={1}>
-                  {mat.rubriques.slice(0, 3).join(' • ')}
-                </Text>
-
-                <View style={styles.matiereCardFooter}>
-                  <View style={styles.countBadge}>
-                    <Ionicons
-                      name="chatbubble-ellipses"
-                      size={13}
-                      color={count > 0 ? COLORS.primary : COLORS.textMuted}
-                    />
-                    <Text
-                      style={[
-                        styles.countBadgeText,
-                        count > 0 && { color: COLORS.primary, fontWeight: '700' },
-                      ]}
-                    >
-                      {count} question{count > 1 ? 's' : ''}
-                    </Text>
-                  </View>
-                  <Ionicons name="arrow-forward-circle" size={22} color={mat.color} />
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
+        {/* REQUESTER MODE NAVIGATION SUB-TABS: "Parcourir" vs "Historique de mes requêtes" */}
         {!isTutorMode && (
-          <Button
-            title="+ Poser une nouvelle question"
-            size="lg"
-            onPress={() => onCreateDemande()}
-            style={{ marginTop: 24, marginBottom: 10 }}
-          />
-        )}
-      </ScrollView>
-    );
-  }
-
-  // ==========================================
-  // VIEW 2: VUE DES QUESTIONS & TRI PAR LEÇON (Diagram Blocks 2 & 3)
-  // ==========================================
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Back to Subject selection */}
-      <TouchableOpacity
-        onPress={() => {
-          setSelectedMatiereNom(null);
-          setSelectedRubrique('all');
-          setSearchQuery('');
-        }}
-        style={styles.backToSubjectsBtn}
-      >
-        <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
-        <Text style={styles.backToSubjectsText}>← Choisir une autre matière</Text>
-      </TouchableOpacity>
-
-      {/* Subject Header Banner */}
-      <Card
-        style={[
-          styles.subjectHeaderCard,
-          currentMatiereObj ? { borderLeftColor: currentMatiereObj.color, borderLeftWidth: 5 } : undefined,
-        ]}
-      >
-        <View style={styles.subjectHeaderRow}>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-              <Badge
-                label={selectedMatiereNom === 'all' ? 'Toutes les matières' : selectedMatiereNom}
-                variant="primary"
-              />
-              {currentMatiereObj?.coefficient && currentMatiereObj.coefficient > 1.0 && (
-                <Badge label="x1.5 crédits" variant="accent" size="sm" />
-              )}
-            </View>
-            <Text style={styles.subjectBannerTitle}>Vue des questions 💬</Text>
-            <Text style={styles.subjectBannerSub}>
-              {questionsList.length} question{questionsList.length > 1 ? 's' : ''} disponible{questionsList.length > 1 ? 's' : ''}
-            </Text>
-          </View>
-
-          {!isTutorMode && (
-            <Button
-              title="+ Poser"
-              size="sm"
-              onPress={() => onCreateDemande(selectedMatiereNom !== 'all' ? selectedMatiereNom : undefined)}
-            />
-          )}
-        </View>
-      </Card>
-
-      {/* ========================================================
-          SUB-BRANCH: TRI PAR LEÇON / RUBRIQUE (Diagram: Tri par leçon)
-          ======================================================== */}
-      {currentMatiereObj && (
-        <View style={styles.triSectionBox}>
-          <View style={styles.triSectionHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="filter" size={16} color={COLORS.primary} />
-              <Text style={styles.triSectionTitle}>Tri par leçon / Chapitre :</Text>
-            </View>
-            <Text style={styles.triSectionCount}>
-              {selectedRubrique === 'all' ? 'Tous chapitres' : selectedRubrique}
-            </Text>
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rubriquesScroll}>
-            {/* All lessons chip */}
+          <View style={styles.requesterTabRow}>
             <TouchableOpacity
-              onPress={() => setSelectedRubrique('all')}
+              onPress={() => {
+                setRequesterTab('matieres');
+                setSelectedMatiereNom(null);
+              }}
               style={[
-                styles.rubriquePill,
-                selectedRubrique === 'all' && styles.rubriquePillActive,
+                styles.requesterTabBtn,
+                requesterTab === 'matieres' && styles.requesterTabBtnActive,
               ]}
             >
+              <Ionicons
+                name="grid"
+                size={16}
+                color={requesterTab === 'matieres' ? COLORS.primary : COLORS.textSecondary}
+              />
               <Text
                 style={[
-                  styles.rubriquePillText,
-                  selectedRubrique === 'all' && styles.rubriquePillTextActive,
+                  styles.requesterTabText,
+                  requesterTab === 'matieres' && styles.requesterTabTextActive,
                 ]}
               >
-                Toutes les leçons
+                Parcourir par matière
               </Text>
             </TouchableOpacity>
 
-            {/* Subject's lessons */}
-            {currentMatiereObj.rubriques.map((rub) => {
-              const isSelected = selectedRubrique.toLowerCase() === rub.toLowerCase();
-              return (
+            <TouchableOpacity
+              onPress={() => setRequesterTab('history')}
+              style={[
+                styles.requesterTabBtn,
+                requesterTab === 'history' && styles.requesterTabBtnActive,
+              ]}
+            >
+              <Ionicons
+                name="time"
+                size={16}
+                color={requesterTab === 'history' ? COLORS.primary : COLORS.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.requesterTabText,
+                  requesterTab === 'history' && styles.requesterTabTextActive,
+                ]}
+              >
+                Historique de mes requêtes ({mySubmittedDemandes.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* =========================================================================
+            VIEW A: HISTORIQUE DES REQUÊTES SOUMISES (For Requester Mode)
+            ========================================================================= */}
+        {!isTutorMode && requesterTab === 'history' ? (
+          <View>
+            <View style={styles.historyHeader}>
+              <View>
+                <Text style={styles.mainStepTitle}>Historique de mes requêtes 📋</Text>
+                <Text style={styles.mainStepSubtitle}>
+                  Suis en temps réel les tuteurs qui répondent à tes questions :
+                </Text>
+              </View>
+              <Button
+                title="+ Poser"
+                size="sm"
+                onPress={() => onCreateDemande()}
+              />
+            </View>
+
+            {/* Status Filter Chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+              {[
+                { id: 'all', label: 'Toutes' },
+                { id: 'ouverte', label: 'En attente' },
+                { id: 'en_cours', label: 'En cours' },
+                { id: 'terminee', label: 'Terminées' },
+                { id: 'annulee', label: 'Annulées' },
+              ].map((filter) => (
                 <TouchableOpacity
-                  key={rub}
-                  onPress={() => setSelectedRubrique(rub)}
+                  key={filter.id}
+                  onPress={() => setHistoryStatusFilter(filter.id)}
                   style={[
-                    styles.rubriquePill,
-                    isSelected && styles.rubriquePillActive,
+                    styles.filterChip,
+                    historyStatusFilter === filter.id && styles.filterChipSelected,
                   ]}
                 >
                   <Text
                     style={[
-                      styles.rubriquePillText,
-                      isSelected && styles.rubriquePillTextActive,
+                      styles.filterChipText,
+                      historyStatusFilter === filter.id && styles.filterChipTextSelected,
                     ]}
                   >
-                    {rub}
+                    {filter.label}
                   </Text>
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
+              ))}
+            </ScrollView>
 
-      {/* Search & Sort Row */}
-      <View style={styles.searchAndSortRow}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={16} color={COLORS.textMuted} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Rechercher un mot-clé..."
-            placeholderTextColor={COLORS.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Sort selector */}
-        <TouchableOpacity
-          onPress={() => {
-            if (sortOrder === 'recent') setSortOrder('duration_asc');
-            else if (sortOrder === 'duration_asc') setSortOrder('duration_desc');
-            else setSortOrder('recent');
-          }}
-          style={styles.sortButton}
-        >
-          <Ionicons name="swap-vertical" size={16} color={COLORS.primary} />
-          <Text style={styles.sortButtonText}>
-            {sortOrder === 'recent'
-              ? 'Plus récentes'
-              : sortOrder === 'duration_asc'
-              ? 'Durée courte'
-              : 'Durée longue'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* LIST OF QUESTIONS */}
-      {questionsList.length === 0 ? (
-        <View style={styles.emptyStateContainer}>
-          <View style={styles.emptyIconCircle}>
-            <Ionicons
-              name={isTutorMode ? 'file-tray' : 'help-buoy'}
-              size={42}
-              color={COLORS.textMuted}
-            />
-          </View>
-          <Text style={styles.emptyStateTitle}>
-            Aucune question trouvée
-          </Text>
-          <Text style={styles.emptyStateDesc}>
-            {isTutorMode
-              ? `Il n'y a pas de demande ouverte correspondant à cette leçon ou à tes filtres de certification.`
-              : `Tu n'as pas encore posé de question dans cette leçon.`}
-          </Text>
-          {!isTutorMode ? (
-            <Button
-              title={`+ Poser une question en ${selectedMatiereNom}`}
-              size="md"
-              onPress={() =>
-                onCreateDemande(
-                  selectedMatiereNom !== 'all' ? selectedMatiereNom : undefined,
-                  selectedRubrique !== 'all' ? selectedRubrique : undefined
-                )
-              }
-              style={{ marginTop: 14 }}
-            />
-          ) : (
-            <Button
-              title="Passer d'autres quiz matières"
-              variant="outline"
-              size="md"
-              onPress={onOpenTutorQuizzes}
-              style={{ marginTop: 14 }}
-            />
-          )}
-        </View>
-      ) : (
-        <View style={styles.cardsContainer}>
-          {questionsList.map((demande) => {
-            const creditsGain = calculateCreditsForMatiere(
-              demande.matiere,
-              demande.duree_proposee
-            );
-
-            return (
-              <Card
-                key={demande.id}
-                onPress={() => onSelectDemande(demande)}
-                style={styles.demandeCard}
-              >
-                {/* Top header */}
-                <View style={styles.cardHeaderRow}>
-                  <View style={styles.subjectRow}>
-                    <Badge label={demande.matiere} variant="primary" />
-                    <Badge label={demande.rubrique} variant="neutral" />
-                  </View>
-                  {isTutorMode ? (
-                    <View style={styles.rewardPill}>
-                      <Ionicons name="sparkles" size={13} color={COLORS.accent} />
-                      <Text style={styles.rewardText}>+{creditsGain} pts</Text>
-                    </View>
-                  ) : (
-                    <Badge
-                      label={
-                        demande.statut === 'ouverte'
-                          ? 'Ouverte'
-                          : demande.statut === 'en_cours'
-                          ? 'En cours'
-                          : 'Terminée'
-                      }
-                      variant={
-                        demande.statut === 'ouverte'
-                          ? 'accent'
-                          : demande.statut === 'en_cours'
-                          ? 'secondary'
-                          : 'neutral'
-                      }
-                      size="sm"
-                    />
-                  )}
+            {/* History Cards */}
+            {displayedHistory.length === 0 ? (
+              <View style={styles.emptyStateContainer}>
+                <View style={styles.emptyIconCircle}>
+                  <Ionicons name="document-text-outline" size={38} color={COLORS.textMuted} />
                 </View>
+                <Text style={styles.emptyStateTitle}>Aucune requête dans cet état</Text>
+                <Text style={styles.emptyStateDesc}>
+                  Tu n'as pas de demande {historyStatusFilter !== 'all' ? `"${historyStatusFilter}"` : 'enregistrée'}.
+                </Text>
+                <Button
+                  title="Poser une question maintenant"
+                  size="md"
+                  onPress={() => onCreateDemande()}
+                  style={{ marginTop: 14 }}
+                />
+              </View>
+            ) : (
+              <View style={styles.cardsContainer}>
+                {displayedHistory.map((demande) => (
+                  <Card
+                    key={demande.id}
+                    onPress={() => onSelectDemande(demande)}
+                    style={styles.demandeCard}
+                  >
+                    <View style={styles.cardHeaderRow}>
+                      <View style={styles.subjectRow}>
+                        <Badge label={demande.matiere} variant="primary" />
+                        <Badge label={demande.rubrique} variant="neutral" />
+                      </View>
+                      <Badge
+                        label={
+                          demande.statut === 'ouverte'
+                            ? 'En attente de tuteur'
+                            : demande.statut === 'en_cours'
+                            ? 'En cours'
+                            : demande.statut === 'terminee'
+                            ? 'Terminée ✓'
+                            : 'Annulée'
+                        }
+                        variant={
+                          demande.statut === 'ouverte'
+                            ? 'accent'
+                            : demande.statut === 'en_cours'
+                            ? 'secondary'
+                            : demande.statut === 'terminee'
+                            ? 'primary'
+                            : 'danger'
+                        }
+                        size="sm"
+                      />
+                    </View>
 
-                {/* Description */}
-                {demande.description && (
-                  <Text style={styles.cardDescription} numberOfLines={2}>
-                    {demande.description}
-                  </Text>
-                )}
-
-                {/* Meta row */}
-                <View style={styles.metaRow}>
-                  <View style={styles.metaItem}>
-                    <Ionicons name="person-outline" size={14} color={COLORS.textSecondary} />
-                    <Text style={styles.metaText}>
-                      {demande.auteur_nom} ({demande.classe_demandeur})
-                    </Text>
-                  </View>
-
-                  <View style={styles.metaItem}>
-                    <Ionicons name="school-outline" size={14} color={COLORS.textSecondary} />
-                    <Text style={styles.metaText}>{demande.auteur_ecole}</Text>
-                  </View>
-
-                  <View style={styles.metaItem}>
-                    <Ionicons
-                      name={demande.mode === 'video' ? 'videocam-outline' : 'chatbubble-outline'}
-                      size={14}
-                      color={COLORS.primary}
-                    />
-                    <Text style={[styles.metaText, { color: COLORS.primary, fontWeight: '700' }]}>
-                      {demande.mode === 'video' ? 'Vidéo' : 'Écrit'} • {demande.duree_proposee} min
-                    </Text>
-                  </View>
-
-                  {demande.presentiel && (
-                    <View style={styles.metaItem}>
-                      <Ionicons name="location-outline" size={14} color={COLORS.secondary} />
-                      <Text style={[styles.metaText, { color: COLORS.secondary, fontWeight: '700' }]}>
-                        Présentiel
+                    {/* Description or Audio note */}
+                    {demande.description ? (
+                      <Text style={styles.cardDescription} numberOfLines={2}>
+                        {demande.description}
                       </Text>
+                    ) : null}
+
+                    {/* Format Badge & Tutor info */}
+                    <View style={styles.metaRow}>
+                      <View style={styles.metaItem}>
+                        <Ionicons
+                          name={demande.mode === 'audio' ? 'mic' : 'videocam'}
+                          size={15}
+                          color={COLORS.primary}
+                        />
+                        <Text style={[styles.metaText, { color: COLORS.primary, fontWeight: '700' }]}>
+                          {demande.mode === 'audio' ? 'Message Audio' : 'Appel Vidéo'} • {demande.duree_proposee} min
+                        </Text>
+                      </View>
+
+                      {demande.aidant_nom && (
+                        <View style={styles.metaItem}>
+                          <Ionicons name="person-circle" size={15} color={COLORS.secondary} />
+                          <Text style={[styles.metaText, { color: COLORS.secondary, fontWeight: '700' }]}>
+                            Tuteur : {demande.aidant_nom}
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                  )}
+
+                    <View style={styles.cardFooter}>
+                      <Text style={styles.timeAgoText}>{formatTimeAgo(demande.created_at)}</Text>
+                      <View style={styles.actionHint}>
+                        <Text style={styles.actionHintText}>Voir le suivi</Text>
+                        <Ionicons name="arrow-forward" size={14} color={COLORS.primary} />
+                      </View>
+                    </View>
+                  </Card>
+                ))}
+              </View>
+            )}
+          </View>
+        ) : selectedMatiereNom === null ? (
+          // =========================================================================
+          // VIEW B: CHOIX DE LA MATIÈRE (Diagram Block 1)
+          // =========================================================================
+          <View>
+            <View style={styles.stepHeaderBox}>
+              <View style={styles.stepBadge}>
+                <Text style={styles.stepBadgeText}>Étape 1</Text>
+              </View>
+              <Text style={styles.mainStepTitle}>Choix de la matière 📚</Text>
+              <Text style={styles.mainStepSubtitle}>
+                {isTutorMode
+                  ? 'Sélectionne une matière pour voir les élèves en attente que tu peux aider :'
+                  : 'Sélectionne une matière pour voir les questions ou en poser une :'}
+              </Text>
+            </View>
+
+            {/* "Toutes les matières" Card */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                setSelectedMatiereNom('all');
+                setSelectedRubrique('all');
+              }}
+              style={styles.allSubjectsCard}
+            >
+              <View style={styles.allSubjectsLeft}>
+                <View style={styles.allSubjectsIcon}>
+                  <Ionicons name="apps" size={22} color={COLORS.primary} />
+                </View>
+                <View>
+                  <Text style={styles.allSubjectsTitle}>Toutes les matières confondues</Text>
+                  <Text style={styles.allSubjectsSub}>
+                    {isTutorMode
+                      ? `${availableTutorDemandes.length} demande(s) disponible(s)`
+                      : 'Explorer toutes les questions'}
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+            </TouchableOpacity>
+
+            {/* Grid of Matieres (Responsive 1 or 2 columns) */}
+            <View style={[styles.matieresGrid, isLargeScreen && styles.matieresGridLarge]}>
+              {matieres.map((mat) => {
+                const count = getQuestionCountForMatiere(mat.nom);
+                const isValidated = !!currentUser.quiz_valide_par_matiere[mat.nom];
+                const isHighCoeff = mat.coefficient > 1.0;
+
+                return (
+                  <TouchableOpacity
+                    key={mat.id}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setSelectedMatiereNom(mat.nom);
+                      setSelectedRubrique('all');
+                    }}
+                    style={[
+                      styles.matiereSelectCard,
+                      isLargeScreen && styles.matiereSelectCardLarge,
+                      isTutorMode && isValidated && styles.matiereCardTutorValid,
+                    ]}
+                  >
+                    <View style={styles.matiereCardHeader}>
+                      <View style={[styles.matiereCardIcon, { backgroundColor: mat.color + '20' }]}>
+                        <Ionicons name="book" size={22} color={mat.color} />
+                      </View>
+                      <View style={styles.cardBadgesGroup}>
+                        {isHighCoeff && (
+                          <Badge label="x1.5" variant="accent" size="sm" />
+                        )}
+                        {isTutorMode && (
+                          <Badge
+                            label={isValidated ? 'Certifié ✓' : 'Non certifié'}
+                            variant={isValidated ? 'secondary' : 'neutral'}
+                            size="sm"
+                          />
+                        )}
+                      </View>
+                    </View>
+
+                    <Text style={styles.matiereCardName}>{mat.nom}</Text>
+                    <Text style={styles.matiereCardRubriques} numberOfLines={1}>
+                      {mat.rubriques.slice(0, 3).join(' • ')}
+                    </Text>
+
+                    <View style={styles.matiereCardFooter}>
+                      <View style={styles.countBadge}>
+                        <Ionicons
+                          name="help-circle"
+                          size={14}
+                          color={count > 0 ? COLORS.primary : COLORS.textMuted}
+                        />
+                        <Text
+                          style={[
+                            styles.countBadgeText,
+                            count > 0 && { color: COLORS.primary, fontWeight: '700' },
+                          ]}
+                        >
+                          {count} disponible{count > 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                      <Ionicons name="arrow-forward-circle" size={22} color={mat.color} />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {!isTutorMode && (
+              <Button
+                title="+ Poser une nouvelle question"
+                size="lg"
+                onPress={() => onCreateDemande()}
+                style={{ marginTop: 24, marginBottom: 10 }}
+              />
+            )}
+          </View>
+        ) : (
+          // =========================================================================
+          // VIEW C: VUE DES QUESTIONS & TRI PAR LEÇON (Diagram Blocks 2 & 3)
+          // =========================================================================
+          <View>
+            {/* Back button */}
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedMatiereNom(null);
+                setSelectedRubrique('all');
+                setSearchQuery('');
+              }}
+              style={styles.backToSubjectsBtn}
+            >
+              <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
+              <Text style={styles.backToSubjectsText}>← Choisir une autre matière</Text>
+            </TouchableOpacity>
+
+            {/* Subject Header Banner */}
+            <Card
+              style={[
+                styles.subjectHeaderCard,
+                currentMatiereObj ? { borderLeftColor: currentMatiereObj.color, borderLeftWidth: 5 } : undefined,
+              ]}
+            >
+              <View style={styles.subjectHeaderRow}>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <Badge
+                      label={selectedMatiereNom === 'all' ? 'Toutes les matières' : selectedMatiereNom}
+                      variant="primary"
+                    />
+                    {currentMatiereObj?.coefficient && currentMatiereObj.coefficient > 1.0 && (
+                      <Badge label="x1.5 crédits" variant="accent" size="sm" />
+                    )}
+                  </View>
+                  <Text style={styles.subjectBannerTitle}>Vue des questions 💬</Text>
+                  <Text style={styles.subjectBannerSub}>
+                    {questionsList.length} demande{questionsList.length > 1 ? 's' : ''} ouverte{questionsList.length > 1 ? 's' : ''}
+                  </Text>
                 </View>
 
-                {/* Footer */}
-                <View style={styles.cardFooter}>
-                  <Text style={styles.timeAgoText}>{formatTimeAgo(demande.created_at)}</Text>
-                  <View style={styles.actionHint}>
-                    <Text style={styles.actionHintText}>
-                      {isTutorMode ? 'Prendre en charge' : 'Détails'}
-                    </Text>
-                    <Ionicons name="arrow-forward" size={14} color={COLORS.primary} />
+                {!isTutorMode && (
+                  <Button
+                    title="+ Poser"
+                    size="sm"
+                    onPress={() => onCreateDemande(selectedMatiereNom !== 'all' ? selectedMatiereNom : undefined)}
+                  />
+                )}
+              </View>
+            </Card>
+
+            {/* ========================================================
+                SUB-BRANCH: TRI PAR LEÇON / RUBRIQUE (Diagram: Tri par leçon)
+                ======================================================== */}
+            {currentMatiereObj && (
+              <View style={styles.triSectionBox}>
+                <View style={styles.triSectionHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="funnel" size={16} color={COLORS.primary} />
+                    <Text style={styles.triSectionTitle}>Tri par leçon / Chapitre :</Text>
                   </View>
+                  <Text style={styles.triSectionCount}>
+                    {selectedRubrique === 'all' ? 'Tous chapitres' : selectedRubrique}
+                  </Text>
                 </View>
-              </Card>
-            );
-          })}
-        </View>
-      )}
+
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rubriquesScroll}>
+                  <TouchableOpacity
+                    onPress={() => setSelectedRubrique('all')}
+                    style={[
+                      styles.rubriquePill,
+                      selectedRubrique === 'all' && styles.rubriquePillActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.rubriquePillText,
+                        selectedRubrique === 'all' && styles.rubriquePillTextActive,
+                      ]}
+                    >
+                      Toutes les leçons
+                    </Text>
+                  </TouchableOpacity>
+
+                  {currentMatiereObj.rubriques.map((rub) => {
+                    const isSelected = selectedRubrique.toLowerCase() === rub.toLowerCase();
+                    return (
+                      <TouchableOpacity
+                        key={rub}
+                        onPress={() => setSelectedRubrique(rub)}
+                        style={[
+                          styles.rubriquePill,
+                          isSelected && styles.rubriquePillActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.rubriquePillText,
+                            isSelected && styles.rubriquePillTextActive,
+                          ]}
+                        >
+                          {rub}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Search & Sort Controls */}
+            <View style={styles.searchAndSortRow}>
+              <View style={styles.searchBox}>
+                <Ionicons name="search" size={16} color={COLORS.textMuted} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Rechercher par mot-clé..."
+                  placeholderTextColor={COLORS.textMuted}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (sortOrder === 'recent') setSortOrder('duration_asc');
+                  else if (sortOrder === 'duration_asc') setSortOrder('duration_desc');
+                  else setSortOrder('recent');
+                }}
+                style={styles.sortButton}
+              >
+                <Ionicons name="swap-vertical" size={16} color={COLORS.primary} />
+                <Text style={styles.sortButtonText}>
+                  {sortOrder === 'recent'
+                    ? 'Plus récentes'
+                    : sortOrder === 'duration_asc'
+                    ? 'Durée courte'
+                    : 'Durée longue'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* List of Question Cards */}
+            {questionsList.length === 0 ? (
+              <View style={styles.emptyStateContainer}>
+                <View style={styles.emptyIconCircle}>
+                  <Ionicons
+                    name={isTutorMode ? 'file-tray' : 'help-buoy'}
+                    size={42}
+                    color={COLORS.textMuted}
+                  />
+                </View>
+                <Text style={styles.emptyStateTitle}>Aucune demande ouverte</Text>
+                <Text style={styles.emptyStateDesc}>
+                  {isTutorMode
+                    ? `Toutes les demandes de cette leçon ont été prises en charge.`
+                    : `Tu n'as pas encore posé de question pour cette leçon.`}
+                </Text>
+                {!isTutorMode ? (
+                  <Button
+                    title={`+ Poser une question en ${selectedMatiereNom}`}
+                    size="md"
+                    onPress={() =>
+                      onCreateDemande(
+                        selectedMatiereNom !== 'all' ? selectedMatiereNom : undefined,
+                        selectedRubrique !== 'all' ? selectedRubrique : undefined
+                      )
+                    }
+                    style={{ marginTop: 14 }}
+                  />
+                ) : (
+                  <Button
+                    title="Gérer mes certifications matières"
+                    variant="outline"
+                    size="md"
+                    onPress={onOpenTutorQuizzes}
+                    style={{ marginTop: 14 }}
+                  />
+                )}
+              </View>
+            ) : (
+              <View style={styles.cardsContainer}>
+                {questionsList.map((demande) => {
+                  const creditsGain = calculateCreditsForMatiere(
+                    demande.matiere,
+                    demande.duree_proposee
+                  );
+
+                  return (
+                    <Card
+                      key={demande.id}
+                      onPress={() => onSelectDemande(demande)}
+                      style={styles.demandeCard}
+                    >
+                      <View style={styles.cardHeaderRow}>
+                        <View style={styles.subjectRow}>
+                          <Badge label={demande.matiere} variant="primary" />
+                          <Badge label={demande.rubrique} variant="neutral" />
+                        </View>
+                        {isTutorMode ? (
+                          <View style={styles.rewardPill}>
+                            <Ionicons name="sparkles" size={13} color={COLORS.accent} />
+                            <Text style={styles.rewardText}>+{creditsGain} pts</Text>
+                          </View>
+                        ) : (
+                          <Badge label="Ouverte" variant="accent" size="sm" />
+                        )}
+                      </View>
+
+                      {/* Description */}
+                      {demande.description ? (
+                        <Text style={styles.cardDescription} numberOfLines={2}>
+                          {demande.description}
+                        </Text>
+                      ) : null}
+
+                      {/* Meta information tags */}
+                      <View style={styles.metaRow}>
+                        <View style={styles.metaItem}>
+                          <Ionicons name="person-outline" size={14} color={COLORS.textSecondary} />
+                          <Text style={styles.metaText}>
+                            {demande.auteur_nom} ({demande.classe_demandeur})
+                          </Text>
+                        </View>
+
+                        <View style={styles.metaItem}>
+                          <Ionicons name="school-outline" size={14} color={COLORS.textSecondary} />
+                          <Text style={styles.metaText}>{demande.auteur_ecole}</Text>
+                        </View>
+
+                        {/* Format is strictly audio or video */}
+                        <View style={styles.metaItem}>
+                          <Ionicons
+                            name={demande.mode === 'audio' ? 'mic' : 'videocam'}
+                            size={14}
+                            color={COLORS.primary}
+                          />
+                          <Text style={[styles.metaText, { color: COLORS.primary, fontWeight: '700' }]}>
+                            {demande.mode === 'audio' ? 'Audio' : 'Vidéo'} • {demande.duree_proposee} min
+                          </Text>
+                        </View>
+
+                        {demande.presentiel && (
+                          <View style={styles.metaItem}>
+                            <Ionicons name="location-outline" size={14} color={COLORS.secondary} />
+                            <Text style={[styles.metaText, { color: COLORS.secondary, fontWeight: '700' }]}>
+                              Présentiel
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={styles.cardFooter}>
+                        <Text style={styles.timeAgoText}>{formatTimeAgo(demande.created_at)}</Text>
+                        <View style={styles.actionHint}>
+                          <Text style={styles.actionHintText}>
+                            {isTutorMode ? 'Prendre en charge' : 'Détails'}
+                          </Text>
+                          <Ionicons name="arrow-forward" size={14} color={COLORS.primary} />
+                        </View>
+                      </View>
+                    </Card>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 };
@@ -620,9 +823,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  content: {
+  contentContainer: {
     padding: 16,
     paddingBottom: 40,
+  },
+  responsiveWrapper: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
   },
   activeSessionBanner: {
     backgroundColor: COLORS.secondary,
@@ -679,6 +887,44 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.textSecondary,
     lineHeight: 18,
+  },
+  // Requester Sub-Tabs
+  requesterTabRow: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.card,
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  requesterTabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  requesterTabBtnActive: {
+    backgroundColor: COLORS.primaryLight,
+  },
+  requesterTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  requesterTabTextActive: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
   // Flow Step 1: Choix de la matière
   stepHeaderBox: {
@@ -747,6 +993,11 @@ const styles = StyleSheet.create({
   matieresGrid: {
     gap: 12,
   },
+  matieresGridLarge: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
   matiereSelectCard: {
     backgroundColor: COLORS.card,
     borderRadius: 16,
@@ -754,6 +1005,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: COLORS.border,
     ...SHADOWS.sm,
+  },
+  matiereSelectCardLarge: {
+    width: '48.5%',
   },
   matiereCardTutorValid: {
     borderColor: COLORS.secondary,
@@ -915,6 +1169,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: COLORS.primary,
+  },
+  filterScroll: {
+    flexDirection: 'row',
+    marginBottom: 14,
+  },
+  filterChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginRight: 8,
+  },
+  filterChipSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  filterChipTextSelected: {
+    color: '#FFFFFF',
   },
   emptyStateContainer: {
     alignItems: 'center',
