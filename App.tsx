@@ -46,6 +46,8 @@ function MainApp() {
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('list');
   const [selectedDemande, setSelectedDemande] = useState<Demande | null>(null);
+  const [createMatiere, setCreateMatiere] = useState<string | undefined>(undefined);
+  const [createRubrique, setCreateRubrique] = useState<string | undefined>(undefined);
   const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState<boolean>(false);
 
   if (isLoading) {
@@ -82,13 +84,29 @@ function MainApp() {
     setCurrentScreen('detail');
   };
 
+  const handleOpenCreate = (matiere?: string, rubrique?: string) => {
+    setCreateMatiere(matiere);
+    setCreateRubrique(rubrique);
+    setCurrentScreen('create');
+  };
+
   const renderCurrentScreen = () => {
     switch (currentScreen) {
       case 'create':
         return (
           <CreateDemandeScreen
-            onSuccess={() => setCurrentScreen('list')}
-            onCancel={() => setCurrentScreen('list')}
+            initialMatiere={createMatiere}
+            initialRubrique={createRubrique}
+            onSuccess={() => {
+              setCreateMatiere(undefined);
+              setCreateRubrique(undefined);
+              setCurrentScreen('list');
+            }}
+            onCancel={() => {
+              setCreateMatiere(undefined);
+              setCreateRubrique(undefined);
+              setCurrentScreen('list');
+            }}
           />
         );
 
@@ -97,7 +115,7 @@ function MainApp() {
           return (
             <DemandesListScreen
               onSelectDemande={handleSelectDemande}
-              onCreateDemande={() => setCurrentScreen('create')}
+              onCreateDemande={handleOpenCreate}
               onOpenTutorQuizzes={() => setCurrentScreen('quizzes')}
             />
           );

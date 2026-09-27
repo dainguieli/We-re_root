@@ -21,6 +21,8 @@ import { ModeDemande } from '../types';
 interface CreateDemandeScreenProps {
   onSuccess: () => void;
   onCancel?: () => void;
+  initialMatiere?: string;
+  initialRubrique?: string;
 }
 
 const DURATIONS = [5, 10, 15, 20, 25, 30];
@@ -28,11 +30,19 @@ const DURATIONS = [5, 10, 15, 20, 25, 30];
 export const CreateDemandeScreen: React.FC<CreateDemandeScreenProps> = ({
   onSuccess,
   onCancel,
+  initialMatiere,
+  initialRubrique,
 }) => {
   const { currentUser, matieres, createDemande, calculateCreditsForMatiere } = useApp();
 
-  const [selectedMatiereId, setSelectedMatiereId] = useState<string>(matieres[0].id);
-  const [selectedRubrique, setSelectedRubrique] = useState<string>(matieres[0].rubriques[0]);
+  const foundMatiere = initialMatiere
+    ? matieres.find((m) => m.nom.toLowerCase() === initialMatiere.toLowerCase()) || matieres[0]
+    : matieres[0];
+
+  const [selectedMatiereId, setSelectedMatiereId] = useState<string>(foundMatiere.id);
+  const [selectedRubrique, setSelectedRubrique] = useState<string>(
+    initialRubrique || (foundMatiere.rubriques[0] || 'Autre')
+  );
   const [customRubrique, setCustomRubrique] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [mode, setMode] = useState<ModeDemande>('ecrit');

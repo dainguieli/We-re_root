@@ -6,7 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Image,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
@@ -14,13 +14,15 @@ import { COLORS, SHADOWS } from '../theme/colors';
 import { Badge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
-import { Demande } from '../types';
+import { Demande, MatiereConfig } from '../types';
 
 interface DemandesListScreenProps {
   onSelectDemande: (demande: Demande) => void;
-  onCreateDemande: () => void;
+  onCreateDemande: (preselectedMatiere?: string, preselectedRubrique?: string) => void;
   onOpenTutorQuizzes: () => void;
 }
+
+type SortOrder = 'recent' | 'duration_asc' | 'duration_desc';
 
 export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
   onSelectDemande,
@@ -31,12 +33,19 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
     currentUser,
     currentMode,
     demandes,
+    matieres,
     getFilteredDemandesForCurrentUser,
     calculateCreditsForMatiere,
     activeSession,
   } = useApp();
 
-  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('all');
+  // Navigation flow state:
+  // selectedMatiere: null means user is on "Choix de la matière" screen
+  // string means user is inside "Vue des questions" for that subject
+  const [selectedMatiereNom, setSelectedMatiereNom] = useState<string | null>(null);
+  const [selectedRubrique, setSelectedRubrique] = useState<string>('all'); // "Tri par leçon"
+  const [sortOrder, setSortOrder] = useState<SortOrder>('recent');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
   if (!currentUser) return null;
@@ -44,18 +53,63 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
   const isTutorMode = currentMode === 'aide';
   const isSuspended = currentUser.statut_tuteur === 'suspendu';
 
-  // Determine list of requests to display
-  let displayedDemandes: Demande[] = [];
+  // Base list of questions based on mode
+  let baseDemandes: Demande[] = [];
   if (isTutorMode) {
-    displayedDemandes = getFilteredDemandesForCurrentUser();
+    baseDemandes = getFilteredDemandesForCurrentUser();
   } else {
-    displayedDemandes = demandes.filter((d) => d.auteur_id === currentUser.id);
+    baseDemandes = demandes.filter((d) => d.auteur_id === currentUser.id);
   }
 
-  // Filter by subject if chosen
-  if (selectedSubjectFilter !== 'all') {
-    displayedDemandes = displayedDemandes.filter(
-      (d) => d.matiere.toLowerCase() === selectedSubjectFilter.toLowerCase()
+  // Count questions per subject
+  const getQuestionCountForMatiere = (matiereNom: string): number => {
+    if (matiereNom === 'all') return baseDemandes.length;
+    return baseDemandes.filter(
+      (d) => d.matiere.toLowerCase() === matiereNom.toLowerCase()
+    ).length;
+  };
+
+  const currentMatiereObj: MatiereConfig | undefined = matieres.find(
+    (m) => m.nom.toLowerCase() === (selectedMatiereNom || '').toLowerCase()
+  );
+
+  // Filtered list in "Vue des questions"
+  let questionsList = baseDemandes;
+
+  if (selectedMatiereNom && selectedMatiereNom !== 'all') {
+    questionsList = questionsList.filter(
+      (d) => d.matiere.toLowerCase() === selectedMatiereNom.toLowerCase()
+    );
+  }
+
+  // Sub-filter: "Tri par leçon" (Rubrique)
+  if (selectedRubrique !== 'all') {
+    questionsList = questionsList.filter(
+      (d) => d.rubrique.toLowerCase() === selectedRubrique.toLowerCase()
+    );
+  }
+
+  // Search query filter
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    questionsList = questionsList.filter(
+      (d) =>
+        d.description?.toLowerCase().includes(q) ||
+        d.rubrique.toLowerCase().includes(q) ||
+        d.matiere.toLowerCase().includes(q) ||
+        d.auteur_nom.toLowerCase().includes(q)
+    );
+  }
+
+  // Sort order
+  if (sortOrder === 'duration_asc') {
+    questionsList.sort((a, b) => a.duree_proposee - b.duree_proposee);
+  } else if (sortOrder === 'duration_desc') {
+    questionsList.sort((a, b) => b.duree_proposee - a.duree_proposee);
+  } else {
+    // recent
+    questionsList.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
   }
 
@@ -65,7 +119,7 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
 
   const onRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 500);
+    setTimeout(() => setRefreshing(false), 400);
   };
 
   const formatTimeAgo = (isoDate: string) => {
@@ -78,6 +132,189 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
     return `Il y a ${Math.floor(diffHours / 24)}j`;
   };
 
+  // ==========================================
+  // VIEW 1: CHOIX DE LA MATIÈRE (Diagram Block 1)
+  // ==========================================
+  if (selectedMatiereNom === null) {
+    return (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Active Session Alert Banner */}
+        {activeSession && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => {
+              const targetDemande = demandes.find((d) => d.id === activeSession.demande_id);
+              if (targetDemande) onSelectDemande(targetDemande);
+            }}
+            style={styles.activeSessionBanner}
+          >
+            <View style={styles.activeSessionRow}>
+              <View style={styles.pulseDot} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.activeSessionTitle}>Session en cours active !</Text>
+                <Text style={styles.activeSessionSub}>
+                  {activeSession.matiere} • {activeSession.aidant_nom} & {activeSession.demandeur_nom}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* SUSPENDED BANNER */}
+        {isTutorMode && isSuspended && (
+          <Card variant="flat" style={styles.suspendedBanner}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Ionicons name="warning" size={22} color={COLORS.danger} style={{ marginRight: 8 }} />
+              <Text style={styles.suspendedTitle}>Compte Tuteur Suspendu</Text>
+            </View>
+            <Text style={styles.suspendedDesc}>
+              Suite à des évaluations insuffisantes (note moyenne &lt; 2.5 ou plusieurs avis négatifs), ton profil tuteur est temporairement suspendu.
+            </Text>
+          </Card>
+        )}
+
+        {/* NO QUIZ VALIDATED BANNER */}
+        {isTutorMode && !isSuspended && validatedSubjects.length === 0 && (
+          <Card variant="highlight" style={styles.noQuizBanner}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Ionicons name="ribbon" size={22} color={COLORS.primary} style={{ marginRight: 8 }} />
+              <Text style={styles.noQuizTitle}>Débloque tes matières d'entraide</Text>
+            </View>
+            <Text style={styles.noQuizDesc}>
+              Pour voir et accepter les demandes d'élèves, valide le mini-quiz de 3 questions (niveau inférieur à {currentUser.classe}).
+            </Text>
+            <Button
+              title="Passer mes quiz tuteur"
+              size="sm"
+              onPress={onOpenTutorQuizzes}
+              style={{ marginTop: 10 }}
+            />
+          </Card>
+        )}
+
+        {/* Section Header */}
+        <View style={styles.stepHeaderBox}>
+          <View style={styles.stepBadge}>
+            <Text style={styles.stepBadgeText}>Étape 1</Text>
+          </View>
+          <Text style={styles.mainStepTitle}>Choix de la matière 📚</Text>
+          <Text style={styles.mainStepSubtitle}>
+            {isTutorMode
+              ? 'Sélectionne une matière pour voir les élèves que tu peux aider :'
+              : 'Sélectionne une matière pour consulter ou poser tes questions :'}
+          </Text>
+        </View>
+
+        {/* "Voir toutes les questions" Quick Card */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => {
+            setSelectedMatiereNom('all');
+            setSelectedRubrique('all');
+          }}
+          style={styles.allSubjectsCard}
+        >
+          <View style={styles.allSubjectsLeft}>
+            <View style={styles.allSubjectsIcon}>
+              <Ionicons name="apps" size={22} color={COLORS.primary} />
+            </View>
+            <View>
+              <Text style={styles.allSubjectsTitle}>Toutes les matières confondues</Text>
+              <Text style={styles.allSubjectsSub}>
+                {baseDemandes.length} demande{baseDemandes.length > 1 ? 's' : ''} au total
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+        </TouchableOpacity>
+
+        {/* Grid of Matieres */}
+        <View style={styles.matieresGrid}>
+          {matieres.map((mat) => {
+            const count = getQuestionCountForMatiere(mat.nom);
+            const isValidated = !!currentUser.quiz_valide_par_matiere[mat.nom];
+            const isHighCoeff = mat.coefficient > 1.0;
+
+            return (
+              <TouchableOpacity
+                key={mat.id}
+                activeOpacity={0.8}
+                onPress={() => {
+                  setSelectedMatiereNom(mat.nom);
+                  setSelectedRubrique('all');
+                }}
+                style={[
+                  styles.matiereSelectCard,
+                  isTutorMode && isValidated && styles.matiereCardTutorValid,
+                ]}
+              >
+                <View style={styles.matiereCardHeader}>
+                  <View style={[styles.matiereCardIcon, { backgroundColor: mat.color + '20' }]}>
+                    <Ionicons name="book" size={22} color={mat.color} />
+                  </View>
+                  <View style={styles.cardBadgesGroup}>
+                    {isHighCoeff && (
+                      <Badge label="x1.5" variant="accent" size="sm" />
+                    )}
+                    {isTutorMode && (
+                      <Badge
+                        label={isValidated ? 'Certifié ✓' : 'Non certifié'}
+                        variant={isValidated ? 'secondary' : 'neutral'}
+                        size="sm"
+                      />
+                    )}
+                  </View>
+                </View>
+
+                <Text style={styles.matiereCardName}>{mat.nom}</Text>
+                <Text style={styles.matiereCardRubriques} numberOfLines={1}>
+                  {mat.rubriques.slice(0, 3).join(' • ')}
+                </Text>
+
+                <View style={styles.matiereCardFooter}>
+                  <View style={styles.countBadge}>
+                    <Ionicons
+                      name="chatbubble-ellipses"
+                      size={13}
+                      color={count > 0 ? COLORS.primary : COLORS.textMuted}
+                    />
+                    <Text
+                      style={[
+                        styles.countBadgeText,
+                        count > 0 && { color: COLORS.primary, fontWeight: '700' },
+                      ]}
+                    >
+                      {count} question{count > 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                  <Ionicons name="arrow-forward-circle" size={22} color={mat.color} />
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {!isTutorMode && (
+          <Button
+            title="+ Poser une nouvelle question"
+            size="lg"
+            onPress={() => onCreateDemande()}
+            style={{ marginTop: 24, marginBottom: 10 }}
+          />
+        )}
+      </ScrollView>
+    );
+  }
+
+  // ==========================================
+  // VIEW 2: VUE DES QUESTIONS & TRI PAR LEÇON (Diagram Blocks 2 & 3)
+  // ==========================================
   return (
     <ScrollView
       style={styles.container}
@@ -85,125 +322,154 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       showsVerticalScrollIndicator={false}
     >
-      {/* Active Session Alert Banner if one is running */}
-      {activeSession && (
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => {
-            const targetDemande = demandes.find((d) => d.id === activeSession.demande_id);
-            if (targetDemande) onSelectDemande(targetDemande);
-          }}
-          style={styles.activeSessionBanner}
-        >
-          <View style={styles.activeSessionRow}>
-            <View style={styles.pulseDot} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.activeSessionTitle}>Session en cours active !</Text>
-              <Text style={styles.activeSessionSub}>
-                {activeSession.matiere} • {activeSession.aidant_nom} & {activeSession.demandeur_nom}
-              </Text>
+      {/* Back to Subject selection */}
+      <TouchableOpacity
+        onPress={() => {
+          setSelectedMatiereNom(null);
+          setSelectedRubrique('all');
+          setSearchQuery('');
+        }}
+        style={styles.backToSubjectsBtn}
+      >
+        <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
+        <Text style={styles.backToSubjectsText}>← Choisir une autre matière</Text>
+      </TouchableOpacity>
+
+      {/* Subject Header Banner */}
+      <Card
+        style={[
+          styles.subjectHeaderCard,
+          currentMatiereObj ? { borderLeftColor: currentMatiereObj.color, borderLeftWidth: 5 } : undefined,
+        ]}
+      >
+        <View style={styles.subjectHeaderRow}>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <Badge
+                label={selectedMatiereNom === 'all' ? 'Toutes les matières' : selectedMatiereNom}
+                variant="primary"
+              />
+              {currentMatiereObj?.coefficient && currentMatiereObj.coefficient > 1.0 && (
+                <Badge label="x1.5 crédits" variant="accent" size="sm" />
+              )}
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+            <Text style={styles.subjectBannerTitle}>Vue des questions 💬</Text>
+            <Text style={styles.subjectBannerSub}>
+              {questionsList.length} question{questionsList.length > 1 ? 's' : ''} disponible{questionsList.length > 1 ? 's' : ''}
+            </Text>
           </View>
-        </TouchableOpacity>
-      )}
 
-      {/* SUSPENDED TUTOR BANNER */}
-      {isTutorMode && isSuspended && (
-        <Card variant="flat" style={styles.suspendedBanner}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-            <Ionicons name="warning" size={22} color={COLORS.danger} style={{ marginRight: 8 }} />
-            <Text style={styles.suspendedTitle}>Compte Tuteur Suspendu</Text>
-          </View>
-          <Text style={styles.suspendedDesc}>
-            Suite à des évaluations insuffisantes (note moyenne &lt; 2.5 ou plusieurs avis négatifs), ton profil tuteur est temporairement masqué.
-          </Text>
-        </Card>
-      )}
-
-      {/* NO QUIZ VALIDATED BANNER */}
-      {isTutorMode && !isSuspended && validatedSubjects.length === 0 && (
-        <Card variant="highlight" style={styles.noQuizBanner}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-            <Ionicons name="ribbon" size={22} color={COLORS.primary} style={{ marginRight: 8 }} />
-            <Text style={styles.noQuizTitle}>Débloque tes matières d'entraide</Text>
-          </View>
-          <Text style={styles.noQuizDesc}>
-            Pour voir et accepter les demandes d'élèves, valide le mini-quiz de 3 questions (niveau inférieur à {currentUser.classe}).
-          </Text>
-          <Button
-            title="Passer mes quiz tuteur"
-            size="sm"
-            onPress={onOpenTutorQuizzes}
-            style={{ marginTop: 10 }}
-          />
-        </Card>
-      )}
-
-      {/* HEADER SECTION WITH COUNTERS */}
-      <View style={styles.listHeaderRow}>
-        <View>
-          <Text style={styles.listSectionTitle}>
-            {isTutorMode ? "Demandes d'entraide disponibles" : 'Mes demandes posées'}
-          </Text>
-          <Text style={styles.listSectionSubtitle}>
-            {isTutorMode
-              ? `Filtrées selon ton niveau (${currentUser.classe}) et matières validées`
-              : 'Suis tes demandes et tes sessions en cours'}
-          </Text>
+          {!isTutorMode && (
+            <Button
+              title="+ Poser"
+              size="sm"
+              onPress={() => onCreateDemande(selectedMatiereNom !== 'all' ? selectedMatiereNom : undefined)}
+            />
+          )}
         </View>
+      </Card>
 
-        {!isTutorMode && (
-          <Button
-            title="+ Poser"
-            size="sm"
-            onPress={onCreateDemande}
-          />
-        )}
-      </View>
+      {/* ========================================================
+          SUB-BRANCH: TRI PAR LEÇON / RUBRIQUE (Diagram: Tri par leçon)
+          ======================================================== */}
+      {currentMatiereObj && (
+        <View style={styles.triSectionBox}>
+          <View style={styles.triSectionHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="filter" size={16} color={COLORS.primary} />
+              <Text style={styles.triSectionTitle}>Tri par leçon / Chapitre :</Text>
+            </View>
+            <Text style={styles.triSectionCount}>
+              {selectedRubrique === 'all' ? 'Tous chapitres' : selectedRubrique}
+            </Text>
+          </View>
 
-      {/* Subject Filter Chips if tutor has multiple subjects or in student mode */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-        <TouchableOpacity
-          onPress={() => setSelectedSubjectFilter('all')}
-          style={[
-            styles.filterChip,
-            selectedSubjectFilter === 'all' && styles.filterChipSelected,
-          ]}
-        >
-          <Text
-            style={[
-              styles.filterChipText,
-              selectedSubjectFilter === 'all' && styles.filterChipTextSelected,
-            ]}
-          >
-            Toutes ({isTutorMode ? displayedDemandes.length : demandes.filter(d => d.auteur_id === currentUser.id).length})
-          </Text>
-        </TouchableOpacity>
-
-        {['Mathématiques', 'Physique-Chimie', 'Français', 'SVT', 'Anglais', 'Histoire-Géo', 'Philosophie'].map((mat) => (
-          <TouchableOpacity
-            key={mat}
-            onPress={() => setSelectedSubjectFilter(mat)}
-            style={[
-              styles.filterChip,
-              selectedSubjectFilter === mat && styles.filterChipSelected,
-            ]}
-          >
-            <Text
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rubriquesScroll}>
+            {/* All lessons chip */}
+            <TouchableOpacity
+              onPress={() => setSelectedRubrique('all')}
               style={[
-                styles.filterChipText,
-                selectedSubjectFilter === mat && styles.filterChipTextSelected,
+                styles.rubriquePill,
+                selectedRubrique === 'all' && styles.rubriquePillActive,
               ]}
             >
-              {mat}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Text
+                style={[
+                  styles.rubriquePillText,
+                  selectedRubrique === 'all' && styles.rubriquePillTextActive,
+                ]}
+              >
+                Toutes les leçons
+              </Text>
+            </TouchableOpacity>
 
-      {/* LIST OF DEMANDE CARDS */}
-      {displayedDemandes.length === 0 ? (
+            {/* Subject's lessons */}
+            {currentMatiereObj.rubriques.map((rub) => {
+              const isSelected = selectedRubrique.toLowerCase() === rub.toLowerCase();
+              return (
+                <TouchableOpacity
+                  key={rub}
+                  onPress={() => setSelectedRubrique(rub)}
+                  style={[
+                    styles.rubriquePill,
+                    isSelected && styles.rubriquePillActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.rubriquePillText,
+                      isSelected && styles.rubriquePillTextActive,
+                    ]}
+                  >
+                    {rub}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Search & Sort Row */}
+      <View style={styles.searchAndSortRow}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search" size={16} color={COLORS.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Rechercher un mot-clé..."
+            placeholderTextColor={COLORS.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Sort selector */}
+        <TouchableOpacity
+          onPress={() => {
+            if (sortOrder === 'recent') setSortOrder('duration_asc');
+            else if (sortOrder === 'duration_asc') setSortOrder('duration_desc');
+            else setSortOrder('recent');
+          }}
+          style={styles.sortButton}
+        >
+          <Ionicons name="swap-vertical" size={16} color={COLORS.primary} />
+          <Text style={styles.sortButtonText}>
+            {sortOrder === 'recent'
+              ? 'Plus récentes'
+              : sortOrder === 'duration_asc'
+              ? 'Durée courte'
+              : 'Durée longue'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* LIST OF QUESTIONS */}
+      {questionsList.length === 0 ? (
         <View style={styles.emptyStateContainer}>
           <View style={styles.emptyIconCircle}>
             <Ionicons
@@ -213,23 +479,28 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
             />
           </View>
           <Text style={styles.emptyStateTitle}>
-            {isTutorMode ? 'Aucune demande correspondante' : 'Aucune demande active'}
+            Aucune question trouvée
           </Text>
           <Text style={styles.emptyStateDesc}>
             {isTutorMode
-              ? `Toutes les demandes ont été prises en charge ou nécessitent la validation de quiz supplémentaires.`
-              : `Tu n'as pas encore posé de question. Clique sur le bouton ci-dessous pour demander de l'aide !`}
+              ? `Il n'y a pas de demande ouverte correspondant à cette leçon ou à tes filtres de certification.`
+              : `Tu n'as pas encore posé de question dans cette leçon.`}
           </Text>
           {!isTutorMode ? (
             <Button
-              title="Poser une question maintenant"
+              title={`+ Poser une question en ${selectedMatiereNom}`}
               size="md"
-              onPress={onCreateDemande}
+              onPress={() =>
+                onCreateDemande(
+                  selectedMatiereNom !== 'all' ? selectedMatiereNom : undefined,
+                  selectedRubrique !== 'all' ? selectedRubrique : undefined
+                )
+              }
               style={{ marginTop: 14 }}
             />
           ) : (
             <Button
-              title="Gérer mes matières & quiz"
+              title="Passer d'autres quiz matières"
               variant="outline"
               size="md"
               onPress={onOpenTutorQuizzes}
@@ -239,7 +510,7 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
         </View>
       ) : (
         <View style={styles.cardsContainer}>
-          {displayedDemandes.map((demande) => {
+          {questionsList.map((demande) => {
             const creditsGain = calculateCreditsForMatiere(
               demande.matiere,
               demande.duree_proposee
@@ -251,7 +522,7 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
                 onPress={() => onSelectDemande(demande)}
                 style={styles.demandeCard}
               >
-                {/* Card Top: Subject + Status / Reward */}
+                {/* Top header */}
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.subjectRow}>
                     <Badge label={demande.matiere} variant="primary" />
@@ -290,7 +561,7 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
                   </Text>
                 )}
 
-                {/* Meta info tags */}
+                {/* Meta row */}
                 <View style={styles.metaRow}>
                   <View style={styles.metaItem}>
                     <Ionicons name="person-outline" size={14} color={COLORS.textSecondary} />
@@ -325,14 +596,12 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
                   )}
                 </View>
 
-                {/* Card Footer: Time & Action Hint */}
+                {/* Footer */}
                 <View style={styles.cardFooter}>
-                  <Text style={styles.timeAgoText}>
-                    {formatTimeAgo(demande.created_at)}
-                  </Text>
+                  <Text style={styles.timeAgoText}>{formatTimeAgo(demande.created_at)}</Text>
                   <View style={styles.actionHint}>
                     <Text style={styles.actionHintText}>
-                      {isTutorMode ? 'Prendre en charge' : 'Voir le statut'}
+                      {isTutorMode ? 'Prendre en charge' : 'Détails'}
                     </Text>
                     <Ionicons name="arrow-forward" size={14} color={COLORS.primary} />
                   </View>
@@ -411,46 +680,241 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     lineHeight: 18,
   },
-  listHeaderRow: {
+  // Flow Step 1: Choix de la matière
+  stepHeaderBox: {
+    marginBottom: 16,
+  },
+  stepBadge: {
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
+  stepBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.primary,
+    textTransform: 'uppercase',
+  },
+  mainStepTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: COLORS.text,
+    letterSpacing: -0.3,
+  },
+  mainStepSubtitle: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  allSubjectsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.card,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: COLORS.primaryLight,
+    marginBottom: 14,
+    ...SHADOWS.sm,
+  },
+  allSubjectsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  allSubjectsIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  allSubjectsTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  allSubjectsSub: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  matieresGrid: {
+    gap: 12,
+  },
+  matiereSelectCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  matiereCardTutorValid: {
+    borderColor: COLORS.secondary,
+  },
+  matiereCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  listSectionTitle: {
+  matiereCardIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardBadgesGroup: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  matiereCardName: {
     fontSize: 18,
     fontWeight: '800',
     color: COLORS.text,
+    marginBottom: 4,
   },
-  listSectionSubtitle: {
+  matiereCardRubriques: {
     fontSize: 12,
     color: COLORS.textSecondary,
-    marginTop: 2,
+    marginBottom: 12,
   },
-  filterScroll: {
+  matiereCardFooter: {
     flexDirection: 'row',
-    marginBottom: 14,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+    paddingTop: 10,
   },
-  filterChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginRight: 8,
+  countBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
-  filterChipSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  filterChipText: {
+  countBadgeText: {
     fontSize: 12,
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
-  filterChipTextSelected: {
+  // Flow Step 2: Vue des questions & Tri par leçon
+  backToSubjectsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  backToSubjectsText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginLeft: 6,
+  },
+  subjectHeaderCard: {
+    padding: 16,
+    marginBottom: 14,
+  },
+  subjectHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  subjectBannerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginTop: 4,
+  },
+  subjectBannerSub: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  triSectionBox: {
+    marginBottom: 14,
+  },
+  triSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  triSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  triSectionCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  rubriquesScroll: {
+    flexDirection: 'row',
+  },
+  rubriquePill: {
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: COLORS.card,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    marginRight: 8,
+  },
+  rubriquePillActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  rubriquePillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  rubriquePillTextActive: {
     color: '#FFFFFF',
+  },
+  searchAndSortRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.text,
+    paddingVertical: 8,
+    marginLeft: 6,
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 4,
+  },
+  sortButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   emptyStateContainer: {
     alignItems: 'center',
@@ -459,12 +923,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
-    marginTop: 10,
+    marginTop: 6,
   },
   emptyIconCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: COLORS.cardAlt,
     alignItems: 'center',
     justifyContent: 'center',
