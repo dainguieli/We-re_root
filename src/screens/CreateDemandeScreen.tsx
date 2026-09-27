@@ -1,0 +1,577 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  Switch,
+  Alert,
+  Image,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useApp } from '../context/AppContext';
+import { COLORS, SHADOWS } from '../theme/colors';
+import { Button } from '../components/Button';
+import { Badge } from '../components/Badge';
+import { Card } from '../components/Card';
+import { ModeDemande } from '../types';
+
+interface CreateDemandeScreenProps {
+  onSuccess: () => void;
+  onCancel?: () => void;
+}
+
+const DURATIONS = [5, 10, 15, 20, 25, 30];
+
+export const CreateDemandeScreen: React.FC<CreateDemandeScreenProps> = ({
+  onSuccess,
+  onCancel,
+}) => {
+  const { currentUser, matieres, createDemande, calculateCreditsForMatiere } = useApp();
+
+  const [selectedMatiereId, setSelectedMatiereId] = useState<string>(matieres[0].id);
+  const [selectedRubrique, setSelectedRubrique] = useState<string>(matieres[0].rubriques[0]);
+  const [customRubrique, setCustomRubrique] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
+  const [mode, setMode] = useState<ModeDemande>('ecrit');
+  const [presentiel, setPresentiel] = useState<boolean>(false);
+  const [duree, setDuree] = useState<number>(15);
+  const [photoUri, setPhotoUri] = useState<string | undefined>(undefined);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const currentMatiere = matieres.find((m) => m.id === selectedMatiereId) || matieres[0];
+
+  const handleMatiereChange = (id: string) => {
+    setSelectedMatiereId(id);
+    const m = matieres.find((item) => item.id === id);
+    if (m && m.rubriques.length > 0) {
+      setSelectedRubrique(m.rubriques[0]);
+    }
+    setCustomRubrique('');
+  };
+
+  const handleAddSamplePhoto = () => {
+    // For demo purposes, we provide a clean placeholder homework photo
+    const sampleUri =
+      'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80';
+    setPhotoUri(sampleUri);
+  };
+
+  const handleSubmit = async () => {
+    if (!description.trim()) {
+      Alert.alert('Précision requise', 'Explique en quelques mots ce qui te bloque ou ta question.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await createDemande({
+        matiere: currentMatiere.nom,
+        rubrique: selectedRubrique === 'Autre' && customRubrique ? customRubrique : selectedRubrique,
+        rubrique_custom: selectedRubrique === 'Autre' ? customRubrique : undefined,
+        photo_uri: photoUri,
+        description: description.trim(),
+        mode,
+        presentiel,
+        duree_proposee: duree,
+      });
+
+      Alert.alert(
+        'Demande publiée !',
+        `Ta demande en ${currentMatiere.nom} est visible par les élèves de ${currentUser?.classe} et classes supérieures certifiés.`,
+        [{ text: 'Super !', onPress: onSuccess }]
+      );
+    } catch (e) {
+      Alert.alert('Erreur', 'Impossible de publier la demande.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const estimatedCredits = calculateCreditsForMatiere(currentMatiere.nom, duree);
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {onCancel && (
+        <TouchableOpacity onPress={onCancel} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          <Text style={styles.backText}>Annuler</Text>
+        </TouchableOpacity>
+      )}
+
+      <View style={styles.header}>
+        <Text style={styles.title}>Poser une question 🙋‍♂️</Text>
+        <Text style={styles.subtitle}>
+          Un camarade va t'aider pour un coup de pouce rapide de {duree} min !
+        </Text>
+      </View>
+
+      {/* 1. Matière */}
+      <Card style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>1. Choisis la matière</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.matiereScroll}>
+          {matieres.map((mat) => {
+            const isSelected = selectedMatiereId === mat.id;
+            return (
+              <TouchableOpacity
+                key={mat.id}
+                onPress={() => handleMatiereChange(mat.id)}
+                style={[
+                  styles.matiereChip,
+                  isSelected && { backgroundColor: mat.color, borderColor: mat.color },
+                ]}
+              >
+                <Ionicons
+                  name="book"
+                  size={16}
+                  color={isSelected ? '#FFFFFF' : mat.color}
+                  style={{ marginRight: 6 }}
+                />
+                <Text
+                  style={[
+                    styles.matiereChipText,
+                    isSelected && styles.matiereChipTextSelected,
+                  ]}
+                >
+                  {mat.nom}
+                </Text>
+                {mat.coefficient > 1.0 && (
+                  <View style={[styles.miniBadge, isSelected && { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
+                    <Text style={[styles.miniBadgeText, isSelected && { color: '#FFFFFF' }]}>x1.5</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* Rubrique */}
+        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Rubrique / Chapitre</Text>
+        <View style={styles.rubriquesContainer}>
+          {currentMatiere.rubriques.map((rub) => {
+            const isSelected = selectedRubrique === rub;
+            return (
+              <TouchableOpacity
+                key={rub}
+                onPress={() => setSelectedRubrique(rub)}
+                style={[
+                  styles.rubriqueChip,
+                  isSelected && styles.rubriqueChipSelected,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.rubriqueChipText,
+                    isSelected && styles.rubriqueChipTextSelected,
+                  ]}
+                >
+                  {rub}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {selectedRubrique === 'Autre' && (
+          <TextInput
+            style={[styles.input, { marginTop: 10 }]}
+            placeholder="Précise le chapitre ou le sujet..."
+            placeholderTextColor={COLORS.textMuted}
+            value={customRubrique}
+            onChangeText={setCustomRubrique}
+          />
+        )}
+      </Card>
+
+      {/* 2. Description & Photo */}
+      <Card style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>2. Détail de ton blocage</Text>
+        <TextInput
+          style={styles.textArea}
+          placeholder="Ex: Je n'arrive pas à factoriser l'expression dans l'exercice 3. Je ne comprends pas où appliquer la formule..."
+          placeholderTextColor={COLORS.textMuted}
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+        />
+
+        {/* Photo attachment */}
+        <View style={styles.photoSection}>
+          {photoUri ? (
+            <View style={styles.photoPreviewContainer}>
+              <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+              <TouchableOpacity
+                onPress={() => setPhotoUri(undefined)}
+                style={styles.removePhotoBtn}
+              >
+                <Ionicons name="trash" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleAddSamplePhoto}
+              style={styles.addPhotoBtn}
+            >
+              <Ionicons name="camera" size={20} color={COLORS.primary} />
+              <Text style={styles.addPhotoText}>Ajouter une photo de l'exercice (optionnel)</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </Card>
+
+      {/* 3. Format & Durée */}
+      <Card style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>3. Format & Durée</Text>
+
+        <View style={styles.modeRow}>
+          <TouchableOpacity
+            onPress={() => setMode('ecrit')}
+            style={[styles.modeCard, mode === 'ecrit' && styles.modeCardSelected]}
+          >
+            <Ionicons
+              name="chatbox-ellipses"
+              size={24}
+              color={mode === 'ecrit' ? COLORS.primary : COLORS.textSecondary}
+            />
+            <Text style={[styles.modeTitle, mode === 'ecrit' && styles.modeTitleSelected]}>
+              Message écrit
+            </Text>
+            <Text style={styles.modeSub}>Chat textuel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setMode('video')}
+            style={[styles.modeCard, mode === 'video' && styles.modeCardSelected]}
+          >
+            <Ionicons
+              name="videocam"
+              size={24}
+              color={mode === 'video' ? COLORS.primary : COLORS.textSecondary}
+            />
+            <Text style={[styles.modeTitle, mode === 'video' && styles.modeTitleSelected]}>
+              Appel vidéo
+            </Text>
+            <Text style={styles.modeSub}>Meet / WhatsApp / Jitsi</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Présentiel Toggle */}
+        <View style={styles.toggleRow}>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={styles.toggleTitle}>Uniquement dans mon école (Présentiel)</Text>
+            <Text style={styles.toggleDesc}>
+              Réservé aux élèves de {currentUser?.ecole || 'votre établissement'}
+            </Text>
+          </View>
+          <Switch
+            value={presentiel}
+            onValueChange={setPresentiel}
+            trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
+            thumbColor={presentiel ? COLORS.primary : '#FFFFFF'}
+          />
+        </View>
+
+        {/* Durée estimée */}
+        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Durée souhaitée</Text>
+        <View style={styles.durationChipsRow}>
+          {DURATIONS.map((d) => {
+            const isSelected = duree === d;
+            return (
+              <TouchableOpacity
+                key={d}
+                onPress={() => setDuree(d)}
+                style={[
+                  styles.durationChip,
+                  isSelected && styles.durationChipSelected,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.durationChipText,
+                    isSelected && styles.durationChipTextSelected,
+                  ]}
+                >
+                  {d} min
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Credit reward info banner */}
+        <View style={styles.creditInfoBanner}>
+          <Ionicons name="gift" size={18} color={COLORS.accent} />
+          <Text style={styles.creditInfoText}>
+            L'aidant recevra <Text style={{ fontWeight: '800' }}>+{estimatedCredits} crédits</Text> à la fin de la session.
+          </Text>
+        </View>
+      </Card>
+
+      <Button
+        title="🚀 Publier ma demande"
+        size="lg"
+        loading={isSubmitting}
+        onPress={handleSubmit}
+        style={{ marginVertical: 20 }}
+      />
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  backText: {
+    marginLeft: 6,
+    fontSize: 15,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  header: {
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+  },
+  sectionCard: {
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 10,
+  },
+  matiereScroll: {
+    flexDirection: 'row',
+    marginBottom: 6,
+  },
+  matiereChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: COLORS.cardAlt,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginRight: 8,
+  },
+  matiereChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  matiereChipTextSelected: {
+    color: '#FFFFFF',
+  },
+  miniBadge: {
+    backgroundColor: COLORS.accentLight,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 6,
+  },
+  miniBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  rubriquesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  rubriqueChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: COLORS.cardAlt,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  rubriqueChipSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  rubriqueChipText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  rubriqueChipTextSelected: {
+    color: '#FFFFFF',
+  },
+  input: {
+    backgroundColor: COLORS.cardAlt,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  textArea: {
+    backgroundColor: COLORS.cardAlt,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    minHeight: 90,
+  },
+  photoSection: {
+    marginTop: 12,
+  },
+  addPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: COLORS.primaryLight,
+    borderStyle: 'dashed',
+    backgroundColor: COLORS.primaryLight + '30',
+  },
+  addPhotoText: {
+    marginLeft: 8,
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  photoPreviewContainer: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  photoPreview: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+  },
+  removePhotoBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: COLORS.danger,
+    padding: 6,
+    borderRadius: 15,
+  },
+  modeRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  modeCard: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: COLORS.cardAlt,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  modeCardSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
+  },
+  modeTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: 6,
+  },
+  modeTitleSelected: {
+    color: COLORS.primary,
+  },
+  modeSub: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: COLORS.borderLight,
+    marginVertical: 8,
+  },
+  toggleTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  toggleDesc: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  durationChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  durationChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: COLORS.cardAlt,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  durationChipSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  durationChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  durationChipTextSelected: {
+    color: '#FFFFFF',
+  },
+  creditInfoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.accentLight,
+    padding: 10,
+    borderRadius: 10,
+  },
+  creditInfoText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: '#78350F',
+    flex: 1,
+  },
+});

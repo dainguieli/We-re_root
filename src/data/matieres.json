@@ -1,0 +1,68 @@
+{
+  "matieres": [
+    {
+      "id": "maths",
+      "nom": "Mathématiques",
+      "coefficient": 1.5,
+      "icon": "calculator",
+      "color": "#3B82F6",
+      "rubriques": ["Algèbre", "Géométrie", "Fonctions", "Statistiques", "Probabilités", "Autre"]
+    },
+    {
+      "id": "physique_chimie",
+      "nom": "Physique-Chimie",
+      "coefficient": 1.5,
+      "icon": "flask",
+      "color": "#8B5CF6",
+      "rubriques": ["Mécanique", "Électricité", "Chimie organique", "Réactions chimiques", "Autre"]
+    },
+    {
+      "id": "svt",
+      "nom": "SVT",
+      "coefficient": 1.0,
+      "icon": "leaf",
+      "color": "#10B981",
+      "rubriques": ["Génétique", "Écologie", "Physiologie", "Autre"]
+    },
+    {
+      "id": "francais",
+      "nom": "Français",
+      "coefficient": 1.0,
+      "icon": "book-open",
+      "color": "#F59E0B",
+      "rubriques": ["Grammaire", "Conjugaison", "Dissertation", "Commentaire de texte", "Autre"]
+    },
+    {
+      "id": "anglais",
+      "nom": "Anglais",
+      "coefficient": 1.0,
+      "icon": "globe",
+      "color": "#EC4899",
+      "rubriques": ["Grammaire", "Vocabulaire", "Expression écrite", "Autre"]
+    },
+    {
+      "id": "histoire_geo",
+      "nom": "Histoire-Géo",
+      "coefficient": 1.0,
+      "icon": "map",
+      "color": "#6366F1",
+      "rubriques": ["Histoire", "Géographie", "Éducation civique", "Autre"]
+    },
+    {
+      "id": "philosophie",
+      "nom": "Philosophie",
+      "coefficient": 1.0,
+      "icon": "lightbulb",
+      "color": "#14B8A6",
+      "rubriques": ["Dissertation", "Notions", "Méthodologie", "Autre"]
+    },
+    {
+      "id": "autre",
+      "nom": "Autre matière",
+      "coefficient": 1.0,
+      "icon": "grid",
+      "color": "#64748B",
+      "rubriques": ["Général", "Exercice", "Devoir", "Autre"]
+    }
+  ]
+}

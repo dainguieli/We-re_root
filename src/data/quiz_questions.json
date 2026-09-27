@@ -1,0 +1,360 @@
+{
+  "questions": [
+    {
+      "id": "m_3e_1",
+      "matiere": "Mathématiques",
+      "niveau_cible": "3e",
+      "question": "Quelle est la factorisation de x² - 9 ?",
+      "options": ["(x - 3)²", "(x - 3)(x + 3)", "(x - 9)(x + 1)", "(x + 3)²"],
+      "bonne_reponse_index": 1,
+      "explication": "Il s'agit de l'identité remarquable a² - b² = (a - b)(a + b) avec a = x et b = 3."
+    },
+    {
+      "id": "m_3e_2",
+      "matiere": "Mathématiques",
+      "niveau_cible": "3e",
+      "question": "Si f(x) = 2x - 5, quelle est l'image de 4 par f ?",
+      "options": ["-3", "3", "8", "5"],
+      "bonne_reponse_index": 1,
+      "explication": "f(4) = 2*(4) - 5 = 8 - 5 = 3."
+    },
+    {
+      "id": "m_3e_3",
+      "matiere": "Mathématiques",
+      "niveau_cible": "3e",
+      "question": "Dans un triangle rectangle, quel théorème permet de calculer la longueur de l'hypoténuse ?",
+      "options": ["Théorème de Thalès", "Théorème de Pythagore", "Théorème des milieux", "Règle de trois"],
+      "bonne_reponse_index": 1,
+      "explication": "Le théorème de Pythagore stipule que BC² = AB² + AC²."
+    },
+    {
+      "id": "m_4e_1",
+      "matiere": "Mathématiques",
+      "niveau_cible": "4e",
+      "question": "Combien vaut (-4) x (-3) ?",
+      "options": ["-12", "12", "-7", "7"],
+      "bonne_reponse_index": 1,
+      "explication": "Le produit de deux nombres négatifs est positif: (-4) x (-3) = +12."
+    },
+    {
+      "id": "m_4e_2",
+      "matiere": "Mathématiques",
+      "niveau_cible": "4e",
+      "question": "Quelle est l'écriture simplifiée de 3x + 5x ?",
+      "options": ["8x²", "8x", "15x", "8"],
+      "bonne_reponse_index": 1,
+      "explication": "3x + 5x = (3 + 5)x = 8x."
+    },
+    {
+      "id": "m_4e_3",
+      "matiere": "Mathématiques",
+      "niveau_cible": "4e",
+      "question": "Quelle est la valeur de 10³ ?",
+      "options": ["30", "100", "1000", "3000"],
+      "bonne_reponse_index": 2,
+      "explication": "10³ = 10 x 10 x 10 = 1000."
+    },
+    {
+      "id": "m_2nde_1",
+      "matiere": "Mathématiques",
+      "niveau_cible": "2nde",
+      "question": "Quel est l'ensemble des solutions de l'inéquation 2x - 4 > 0 ?",
+      "options": ["]-∞, 2[", "]2, +∞[", "[-2, 2]", "[2, +∞["],
+      "bonne_reponse_index": 1,
+      "explication": "2x > 4 => x > 2, soit l'intervalle ]2, +∞[."
+    },
+    {
+      "id": "m_2nde_2",
+      "matiere": "Mathématiques",
+      "niveau_cible": "2nde",
+      "question": "Le vecteur AB a pour coordonnées (3, -2) et C a pour coordonnées (1, 1). Quelles sont les coordonnées de D si CD = AB ?",
+      "options": ["(4, -1)", "(2, -3)", "(4, 3)", "(2, 1)"],
+      "bonne_reponse_index": 0,
+      "explication": "xD - xC = 3 => xD = 4; yD - yC = -2 => yD = -1."
+    },
+    {
+      "id": "m_2nde_3",
+      "matiere": "Mathématiques",
+      "niveau_cible": "2nde",
+      "question": "Quelle est la forme canonique de x² - 4x + 3 ?",
+      "options": ["(x - 2)² - 1", "(x + 2)² - 1", "(x - 2)² + 3", "(x - 1)(x - 3)"],
+      "bonne_reponse_index": 0,
+      "explication": "x² - 4x + 3 = (x - 2)² - 4 + 3 = (x - 2)² - 1."
+    },
+    {
+      "id": "m_1ere_1",
+      "matiere": "Mathématiques",
+      "niveau_cible": "1ère",
+      "question": "Quelle est la dérivée de f(x) = 3x² - 5x + 2 ?",
+      "options": ["6x - 5", "3x - 5", "6x² - 5", "6x + 2"],
+      "bonne_reponse_index": 0,
+      "explication": "(3x²)' = 6x, (-5x)' = -5, (2)' = 0, donc f'(x) = 6x - 5."
+    },
+    {
+      "id": "m_1ere_2",
+      "matiere": "Mathématiques",
+      "niveau_cible": "1ère",
+      "question": "Quel est le discriminant Δ de 2x² - 4x + 2 = 0 ?",
+      "options": ["0", "16", "-16", "4"],
+      "bonne_reponse_index": 0,
+      "explication": "Δ = b² - 4ac = (-4)² - 4*(2)*(2) = 16 - 16 = 0."
+    },
+    {
+      "id": "m_1ere_3",
+      "matiere": "Mathématiques",
+      "niveau_cible": "1ère",
+      "question": "Si une suite géométrique a pour premier terme u0 = 2 et raison q = 3, combien vaut u2 ?",
+      "options": ["6", "18", "12", "8"],
+      "bonne_reponse_index": 1,
+      "explication": "u2 = u0 * q² = 2 * 3² = 2 * 9 = 18."
+    },
+    {
+      "id": "m_6e_1",
+      "matiere": "Mathématiques",
+      "niveau_cible": "6e",
+      "question": "Combien font 15 + 27 ?",
+      "options": ["32", "42", "41", "38"],
+      "bonne_reponse_index": 1,
+      "explication": "15 + 27 = 42."
+    },
+    {
+      "id": "m_6e_2",
+      "matiere": "Mathématiques",
+      "niveau_cible": "6e",
+      "question": "Quel est le périmètre d'un carré de côté 5 cm ?",
+      "options": ["10 cm", "20 cm", "25 cm", "15 cm"],
+      "bonne_reponse_index": 1,
+      "explication": "Périmètre = 4 x côté = 4 x 5 = 20 cm."
+    },
+    {
+      "id": "m_6e_3",
+      "matiere": "Mathématiques",
+      "niveau_cible": "6e",
+      "question": "Quelle fraction est équivalente à 0.5 ?",
+      "options": ["1/4", "1/2", "3/4", "1/5"],
+      "bonne_reponse_index": 1,
+      "explication": "0.5 = 1/2."
+    },
+    {
+      "id": "pc_3e_1",
+      "matiere": "Physique-Chimie",
+      "niveau_cible": "3e",
+      "question": "Quelle est la formule liant la tension U, la résistance R et l'intensité I (loi d'Ohm) ?",
+      "options": ["U = R / I", "U = R x I", "I = U x R", "R = U x I"],
+      "bonne_reponse_index": 1,
+      "explication": "La loi d'Ohm est U = R x I."
+    },
+    {
+      "id": "pc_3e_2",
+      "matiere": "Physique-Chimie",
+      "niveau_cible": "3e",
+      "question": "Quel est le pH d'une solution neutre à 25°C ?",
+      "options": ["0", "7", "14", "1"],
+      "bonne_reponse_index": 1,
+      "explication": "Un pH égal à 7 correspond à une solution neutre."
+    },
+    {
+      "id": "pc_3e_3",
+      "matiere": "Physique-Chimie",
+      "niveau_cible": "3e",
+      "question": "Quel ion donne une couleur bleue avec la soude ?",
+      "options": ["Ion fer II (Fe2+)", "Ion cuivre II (Cu2+)", "Ion chlorure (Cl-)", "Ion sodium (Na+)"],
+      "bonne_reponse_index": 1,
+      "explication": "Le précipité d'hydroxyde de cuivre Cu(OH)2 est de couleur bleue."
+    },
+    {
+      "id": "pc_default_1",
+      "matiere": "Physique-Chimie",
+      "niveau_cible": "2nde",
+      "question": "Quelle est l'unité de la force dans le Système International ?",
+      "options": ["Joule (J)", "Newton (N)", "Watt (W)", "Pascal (Pa)"],
+      "bonne_reponse_index": 1,
+      "explication": "L'unité légale d'une force est le Newton (N)."
+    },
+    {
+      "id": "pc_default_2",
+      "matiere": "Physique-Chimie",
+      "niveau_cible": "2nde",
+      "question": "Quelle est la formule de la masse volumique ρ ?",
+      "options": ["ρ = m x V", "ρ = m / V", "ρ = V / m", "ρ = m + V"],
+      "bonne_reponse_index": 1,
+      "explication": "La masse volumique est le quotient de la masse par le volume (m/V)."
+    },
+    {
+      "id": "pc_default_3",
+      "matiere": "Physique-Chimie",
+      "niveau_cible": "2nde",
+      "question": "Quel gaz est mis en évidence par une détonation en présence d'une flamme (aboiement) ?",
+      "options": ["Dioxygène (O2)", "Dioxyde de carbone (CO2)", "Dihydrogène (H2)", "Azote (N2)"],
+      "bonne_reponse_index": 2,
+      "explication": "Le dihydrogène produit une petite détonation caractéristique en présence d'une flamme."
+    },
+    {
+      "id": "fr_3e_1",
+      "matiere": "Français",
+      "niveau_cible": "3e",
+      "question": "Dans 'Ces enfants que j'ai vus ont bien grandi', pourquoi 'vus' prend-il un 's' ?",
+      "options": [
+        "Car le sujet est 'ces enfants'",
+        "Car le COD 'que' (mis pour ces enfants) est placé avant l'auxiliaire avoir",
+        "Car l'auxiliaire est avoir",
+        "C'est une faute, vus ne s'accorde jamais avec avoir"
+      ],
+      "bonne_reponse_index": 1,
+      "explication": "Avec l'auxiliaire avoir, le participe passé s'accorde avec le COD s'il est placé avant le verbe."
+    },
+    {
+      "id": "fr_3e_2",
+      "matiere": "Français",
+      "niveau_cible": "3e",
+      "question": "Quelle est la figure de style dans : 'Cette obscure clarté qui tombe des étoiles' ?",
+      "options": ["Une métaphore", "Un oxymore", "Une hyperbole", "Une métonymie"],
+      "bonne_reponse_index": 1,
+      "explication": "L'oxymore réunit deux termes de sens contraires dans un même syntagme."
+    },
+    {
+      "id": "fr_3e_3",
+      "matiere": "Français",
+      "niveau_cible": "3e",
+      "question": "À quel temps est conjugué : 'Nous chantâmes' ?",
+      "options": ["Imparfait", "Passé simple", "Présent", "Futur simple"],
+      "bonne_reponse_index": 1,
+      "explication": "Il s'agit du passé simple de l'indicatif à la 1ère personne du pluriel."
+    },
+    {
+      "id": "svt_default_1",
+      "matiere": "SVT",
+      "niveau_cible": "3e",
+      "question": "Combien de paires de chromosomes possède une cellule humaine normale ?",
+      "options": ["46 paires", "23 paires", "12 paires", "48 paires"],
+      "bonne_reponse_index": 1,
+      "explication": "L'être humain possède 23 paires de chromosomes (soit 46 chromosomes au total)."
+    },
+    {
+      "id": "svt_default_2",
+      "matiere": "SVT",
+      "niveau_cible": "3e",
+      "question": "Quel organe produit l'insuline dans le corps humain ?",
+      "options": ["Le foie", "Le pancréas", "L'estomac", "Le rein"],
+      "bonne_reponse_index": 1,
+      "explication": "L'insuline est sécrétée par les îlots de Langerhans du pancréas."
+    },
+    {
+      "id": "svt_default_3",
+      "matiere": "SVT",
+      "niveau_cible": "3e",
+      "question": "Quel processus permet aux plantes vertes de produire de la matière organique grâce à la lumière ?",
+      "options": ["La respiration", "La photosynthèse", "La fermentation", "La digestion"],
+      "bonne_reponse_index": 1,
+      "explication": "La photosynthèse transforme le CO2 et l'eau en glucose en présence de lumière."
+    },
+    {
+      "id": "ang_default_1",
+      "matiere": "Anglais",
+      "niveau_cible": "3e",
+      "question": "Quelle est la forme correcte : 'She _______ to London three times this year.' ?",
+      "options": ["has been", "went", "is going", "have been"],
+      "bonne_reponse_index": 0,
+      "explication": "On utilise le Present Perfect 'has been' pour une expérience dans une période non révolue."
+    },
+    {
+      "id": "ang_default_2",
+      "matiere": "Anglais",
+      "niveau_cible": "3e",
+      "question": "Quel est le prétérit du verbe irrégulier 'to buy' ?",
+      "options": ["buyed", "bought", "bring", "bot"],
+      "bonne_reponse_index": 1,
+      "explication": "To buy -> bought -> bought."
+    },
+    {
+      "id": "ang_default_3",
+      "matiere": "Anglais",
+      "niveau_cible": "3e",
+      "question": "Traduisez 'Bien que' en anglais :",
+      "options": ["Because", "Although", "Unless", "Therefore"],
+      "bonne_reponse_index": 1,
+      "explication": "'Although' signifie 'Bien que' ou 'Quoique'."
+    },
+    {
+      "id": "hg_default_1",
+      "matiere": "Histoire-Géo",
+      "niveau_cible": "3e",
+      "question": "En quelle année a eu lieu l'armistice de la Première Guerre mondiale ?",
+      "options": ["1914", "1918", "1939", "1945"],
+      "bonne_reponse_index": 1,
+      "explication": "L'armistice a été signé le 11 novembre 1918."
+    },
+    {
+      "id": "hg_default_2",
+      "matiere": "Histoire-Géo",
+      "niveau_cible": "3e",
+      "question": "Quelle est la capitale de l'Australie ?",
+      "options": ["Sydney", "Melbourne", "Canberra", "Brisbane"],
+      "bonne_reponse_index": 2,
+      "explication": "La capitale de l'Australie est Canberra (et non Sydney)."
+    },
+    {
+      "id": "hg_default_3",
+      "matiere": "Histoire-Géo",
+      "niveau_cible": "3e",
+      "question": "Quel symbole représente la République française ?",
+      "options": ["L'Aigle royal", "Marianne", "L'Oncle Sam", "Le Lion des Flandres"],
+      "bonne_reponse_index": 1,
+      "explication": "Marianne est la figure allégorique de la République française."
+    },
+    {
+      "id": "philo_default_1",
+      "matiere": "Philosophie",
+      "niveau_cible": "1ère",
+      "question": "Qui a formulé le fameux 'Cogito ergo sum' (Je pense donc je suis) ?",
+      "options": ["Platon", "René Descartes", "Emmanuel Kant", "Jean-Paul Sartre"],
+      "bonne_reponse_index": 1,
+      "explication": "René Descartes dans le Discours de la méthode (1637)."
+    },
+    {
+      "id": "philo_default_2",
+      "matiere": "Philosophie",
+      "niveau_cible": "1ère",
+      "question": "Dans l'Allégorie de la Caverne de Platon, que représentent les ombres ?",
+      "options": ["La vérité absolue", "L'illusion et les apparences sensibles", "La lumière divine", "La sagesse suprême"],
+      "bonne_reponse_index": 1,
+      "explication": "Les ombres représentent le monde des apparences et de l'opinion (doxa)."
+    },
+    {
+      "id": "philo_default_3",
+      "matiere": "Philosophie",
+      "niveau_cible": "1ère",
+      "question": "Selon Kant, quel impératif moral doit guider nos actions de façon universelle ?",
+      "options": ["L'impératif hypothétique", "L'impératif catégorique", "L'impératif relatif", "L'impératif utilitaire"],
+      "bonne_reponse_index": 1,
+      "explication": "L'impératif catégorique : 'Agis uniquement d'après la maxime qui fait que tu peux vouloir en même temps qu'elle devienne une loi universelle'."
+    },
+    {
+      "id": "autre_default_1",
+      "matiere": "Autre matière",
+      "niveau_cible": "3e",
+      "question": "Quel est le principe fondamental de l'entraide scolaire sur LinkUp ?",
+      "options": ["Se faire payer en euros", "Échanger des compétences et du temps de manière bienveillante", "Faire les devoirs à la place des autres", "Noter sévèrement"],
+      "bonne_reponse_index": 1,
+      "explication": "LinkUp est basé sur l'entraide réciproque, le respect et le partage de connaissances."
+    },
+    {
+      "id": "autre_default_2",
+      "matiere": "Autre matière",
+      "niveau_cible": "3e",
+      "question": "Combien de temps dure idéalement une session d'entraide LinkUp ?",
+      "options": ["2 heures", "Entre 5 et 30 minutes", "Toute la nuit", "1 minute"],
+      "bonne_reponse_index": 1,
+      "explication": "Les sessions LinkUp sont conçues pour des coups de pouce ciblés de 5 à 30 minutes."
+    },
+    {
+      "id": "autre_default_3",
+      "matiere": "Autre matière",
+      "niveau_cible": "3e",
+      "question": "Que faire si une explication n'est pas claire pendant une session ?",
+      "options": ["Arrêter immédiatement", "Poser des questions et demander un exemple concret", "Mettre une mauvaise note sans parler", "Quitter l'application"],
+      "bonne_reponse_index": 1,
+      "explication": "La communication bienveillante et les exemples permettent de débloquer la compréhension."
+    }
+  ]
+}
