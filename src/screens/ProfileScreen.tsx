@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 40,
   },
   responsiveWrapper: {
     width: '100%',
@@ -429,18 +429,16 @@ const styles = StyleSheet.create({
   },
   statsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
     marginBottom: 14,
   },
   statCard: {
     flex: 1,
-    minWidth: '28%',
     alignItems: 'center',
     padding: 12,
   },
   statValue: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     color: COLORS.text,
     marginTop: 4,

@@ -2,7 +2,7 @@
 
 # dependencies
 node_modules/
-./next
+
 # Expo
 .expo/
 dist/
@@ -39,7 +39,3 @@ yarn-error.*
 # generated native folders
 /ios
 /android
-
-# Next.js
-.next/
-out/

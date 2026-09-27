@@ -4,9 +4,9 @@ import {
   StyleSheet,
   View,
   StatusBar,
+  ActivityIndicator,
   TouchableOpacity,
   Text,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppProvider, useApp } from './src/context/AppContext';
@@ -38,8 +38,10 @@ type ScreenType =
 function MainApp() {
   const {
     currentUser,
+    isLoading,
     activeSession,
     pendingRatingSession,
+    currentMode,
   } = useApp();
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('list');
@@ -47,6 +49,14 @@ function MainApp() {
   const [createMatiere, setCreateMatiere] = useState<string | undefined>(undefined);
   const [createRubrique, setCreateRubrique] = useState<string | undefined>(undefined);
   const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState<boolean>(false);
+
+  if (isLoading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   // If no user exists, show register screen
   if (!currentUser) {
@@ -318,20 +328,21 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    minHeight: 0,
-    width: '100%',
     backgroundColor: COLORS.background,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
   },
   body: {
     flex: 1,
-    minHeight: 0,
   },
   tabBarContainer: {
     backgroundColor: COLORS.card,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    paddingBottom: Platform.OS === 'ios' ? 18 : 6,
     ...SHADOWS.md,
   },
   tabBar: {
@@ -340,6 +351,7 @@ const styles = StyleSheet.create({
     maxWidth: 760,
     alignSelf: 'center',
     paddingVertical: 6,
+    paddingBottom: 10,
     alignItems: 'center',
     justifyContent: 'space-around',
   },

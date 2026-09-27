@@ -292,7 +292,7 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
                           </Text>
                         </View>
                         <View style={{ flex: 1 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                             <Text style={styles.proposalTutorName}>{prop.aidant_nom}</Text>
                             <Badge
                               label={`⏱️ Propose ${prop.duree_proposee_min} min`}
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    paddingBottom: 110,
+    paddingBottom: 40,
   },
   responsiveWrapper: {
     width: '100%',

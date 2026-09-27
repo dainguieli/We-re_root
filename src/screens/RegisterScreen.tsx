@@ -420,7 +420,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess, onCan
           placeholder="Ex: Collège Moderne de Bouaké..."
           placeholderTextColor={COLORS.textMuted}
           value={customEcole}
-          onChangeText={(val: string) => setCustomEcole(val)}
+          onChangeText={(val) => setCustomEcole(val)}
         />
       </View>
 
@@ -1014,8 +1014,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingTop: 24,
-    paddingBottom: 90,
+    paddingTop: 40,
+    paddingBottom: 50,
   },
   responsiveWrapper: {
     width: '100%',
@@ -1653,19 +1653,16 @@ const styles = StyleSheet.create({
   },
   roleChoiceRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
     marginTop: 6,
   },
   roleChoiceBtn: {
     flex: 1,
-    minWidth: '30%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
     paddingVertical: 10,
-    paddingHorizontal: 8,
     borderRadius: 10,
     backgroundColor: COLORS.cardAlt,
     borderWidth: 1.5,
@@ -1679,7 +1676,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: COLORS.textSecondary,
-    textAlign: 'center',
   },
   roleChoiceTextSelected: {
     color: COLORS.primary,

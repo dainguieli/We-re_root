@@ -860,7 +860,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    paddingBottom: 110,
+    paddingBottom: 40,
   },
   responsiveWrapper: {
     width: '100%',
@@ -1006,8 +1006,6 @@ const styles = StyleSheet.create({
   allSubjectsLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    marginRight: 8,
   },
   allSubjectsIcon: {
     width: 38,
@@ -1304,7 +1302,7 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
     paddingVertical: 8,
     borderTopWidth: 1,
     borderBottomWidth: 1,
@@ -1315,7 +1313,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    flexShrink: 1,
   },
   metaText: {
     fontSize: 12,

@@ -14,7 +14,6 @@ import {
   calculateCreditsFromRating,
 } from '../types';
 import matieresJson from '../data/matieres.json';
-import { SEED_USERS, SEED_DEMANDES, SEED_SESSIONS } from '../data/seed_data';
 import { StorageService } from '../services/storage';
 
 interface AppContextType {
@@ -26,6 +25,7 @@ interface AppContextType {
   pendingRatingSession: Session | null;
   matieres: MatiereConfig[];
   currentMode: 'aide' | 'besoin';
+  isLoading: boolean;
   
   // Actions
   setCurrentMode: (mode: 'aide' | 'besoin') => void;
@@ -80,13 +80,14 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(SEED_USERS[0] ?? null);
-  const [users, setUsers] = useState<User[]>(() => [...SEED_USERS]);
-  const [demandes, setDemandes] = useState<Demande[]>(() => [...SEED_DEMANDES]);
-  const [sessions, setSessions] = useState<Session[]>(() => [...SEED_SESSIONS]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [demandes, setDemandes] = useState<Demande[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSession, setActiveSession] = useState<Session | null>(null);
   const [pendingRatingSession, setPendingRatingSession] = useState<Session | null>(null);
   const [currentMode, setCurrentMode] = useState<'aide' | 'besoin'>('besoin');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const matieres: MatiereConfig[] = useMemo(() => matieresJson.matieres, []);
 
@@ -111,6 +112,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } catch (err) {
         console.error('Failed to init storage', err);
+      } finally {
+        setIsLoading(false);
       }
     }
     loadData();
@@ -571,6 +574,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         pendingRatingSession,
         matieres,
         currentMode,
+        isLoading,
         setCurrentMode,
         registerUser,
         updateUserRolePrefere,

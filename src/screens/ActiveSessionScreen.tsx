@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    paddingBottom: 90,
+    paddingBottom: 40,
   },
   responsiveWrapper: {
     width: '100%',
@@ -278,14 +278,12 @@ const styles = StyleSheet.create({
   },
   timerCard: {
     alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 16,
+    paddingVertical: 24,
     marginBottom: 16,
     backgroundColor: COLORS.card,
   },
   subjectRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
     marginBottom: 14,
   },
@@ -296,7 +294,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   timerDigits: {
-    fontSize: 46,
+    fontSize: 54,
     fontWeight: '800',
     color: COLORS.primary,
     letterSpacing: 2,
@@ -304,9 +302,7 @@ const styles = StyleSheet.create({
   },
   timerControlsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 10,
+    gap: 12,
     marginTop: 6,
   },
   controlBtn: {
@@ -336,8 +332,6 @@ const styles = StyleSheet.create({
   participantRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
   },
   avatarCircle: {
     width: 36,

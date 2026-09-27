@@ -1,7 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Demande, Session } from '../types';
 import { SEED_USERS, SEED_DEMANDES, SEED_SESSIONS } from '../data/seed_data';
-
-const DEFAULT_STARTUP_USER_ID = 'user_awa_3e';
 
 const STORAGE_KEYS = {
   CURRENT_USER: '@linkup_current_user_v1',
@@ -12,21 +11,18 @@ const STORAGE_KEYS = {
   PENDING_RATING: '@linkup_pending_rating_v1',
 };
 
+// Memory fallback in case AsyncStorage fails or during SSR
 const memoryStore: Record<string, string> = {};
-
-function canUseLocalStorage(): boolean {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
-}
 
 async function getItem<T>(key: string, defaultValue: T): Promise<T> {
   try {
-    const raw = canUseLocalStorage() ? window.localStorage.getItem(key) : memoryStore[key];
-    if (raw !== null && raw !== undefined) {
-      return JSON.parse(raw) as T;
+    const raw = await AsyncStorage.getItem(key);
+    if (raw !== null) {
+      return JSON.parse(raw);
     }
   } catch (e) {
     if (memoryStore[key]) {
-      return JSON.parse(memoryStore[key]) as T;
+      return JSON.parse(memoryStore[key]);
     }
   }
   return defaultValue;
@@ -34,9 +30,10 @@ async function getItem<T>(key: string, defaultValue: T): Promise<T> {
 
 async function setItem<T>(key: string, value: T): Promise<void> {
   const serialized = JSON.stringify(value);
-  memoryStore[key] = serialized;
-  if (canUseLocalStorage()) {
-    window.localStorage.setItem(key, serialized);
+  try {
+    await AsyncStorage.setItem(key, serialized);
+  } catch (e) {
+    memoryStore[key] = serialized;
   }
 }
 
@@ -53,9 +50,10 @@ export const StorageService = {
     let demandes = await getItem<Demande[]>(STORAGE_KEYS.DEMANDES, []);
     let sessions = await getItem<Session[]>(STORAGE_KEYS.SESSIONS, []);
     let currentUser = await getItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
-    const activeSession = await getItem<Session | null>(STORAGE_KEYS.ACTIVE_SESSION, null);
-    const pendingRatingSession = await getItem<Session | null>(STORAGE_KEYS.PENDING_RATING, null);
+    let activeSession = await getItem<Session | null>(STORAGE_KEYS.ACTIVE_SESSION, null);
+    let pendingRatingSession = await getItem<Session | null>(STORAGE_KEYS.PENDING_RATING, null);
 
+    // If first launch, seed data
     if (!users || users.length === 0) {
       users = [...SEED_USERS];
       await setItem(STORAGE_KEYS.USERS, users);
@@ -69,7 +67,8 @@ export const StorageService = {
       await setItem(STORAGE_KEYS.SESSIONS, sessions);
     }
     if (!currentUser && users.length > 0) {
-      currentUser = users.find((user) => user.id === DEFAULT_STARTUP_USER_ID) ?? users[0];
+      // Default to the first demo user (Lucas)
+      currentUser = users[0];
       await setItem(STORAGE_KEYS.CURRENT_USER, currentUser);
     }
 
@@ -101,9 +100,10 @@ export const StorageService = {
   },
 
   async resetAll(): Promise<void> {
-    Object.keys(memoryStore).forEach((key) => delete memoryStore[key]);
-    if (canUseLocalStorage()) {
-      Object.values(STORAGE_KEYS).forEach((key) => window.localStorage.removeItem(key));
+    try {
+      await AsyncStorage.clear();
+    } catch (e) {
+      Object.keys(memoryStore).forEach((k) => delete memoryStore[k]);
     }
   },
 };

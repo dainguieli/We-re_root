@@ -35,12 +35,24 @@ export const COLORS = {
 
 export const SHADOWS = {
   sm: {
-    boxShadow: '0 1px 2px rgba(15, 23, 42, 0.05)',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   md: {
-    boxShadow: '0 4px 6px rgba(15, 23, 42, 0.08)',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 4,
   },
   lg: {
-    boxShadow: '0 8px 12px rgba(15, 23, 42, 0.12)',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
   },
 };
