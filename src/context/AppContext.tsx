@@ -9,6 +9,7 @@ import {
   StatutTuteur,
   ModeDemande,
   KycDocType,
+  PropositionAide,
   isEligibleToHelp,
 } from '../types';
 import matieresJson from '../data/matieres.json';
@@ -51,8 +52,19 @@ interface AppContextType {
     audio_duration_sec?: number;
     mode: ModeDemande;
     presentiel: boolean;
-    duree_proposee: number;
+    duree_proposee?: number;
   }) => Promise<Demande>;
+  proposeAide: (
+    demandeId: string,
+    dureeMin: number,
+    message?: string,
+    lienVideo?: string
+  ) => Promise<PropositionAide>;
+  acceptProposition: (demandeId: string, propositionId: string) => Promise<Session>;
+  simulateTutorProposition: (
+    demandeId: string,
+    customTutor?: Partial<PropositionAide>
+  ) => Promise<PropositionAide>;
   takeDemande: (demandeId: string, duree: number, lienVideo?: string) => Promise<Session>;
   completeSession: (sessionId: string) => Promise<void>;
   submitRating: (sessionId: string, rating: number, commentaire?: string) => Promise<void>;
@@ -200,7 +212,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     audio_duration_sec?: number;
     mode: ModeDemande;
     presentiel: boolean;
-    duree_proposee: number;
+    duree_proposee?: number;
   }): Promise<Demande> => {
     if (!currentUser) throw new Error('Utilisateur non connecté');
 
@@ -222,6 +234,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       presentiel: data.presentiel,
       statut: 'ouverte',
       duree_proposee: data.duree_proposee,
+      propositions: [],
       created_at: new Date().toISOString(),
     };
 
@@ -231,51 +244,95 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newDemande;
   };
 
-  const takeDemande = async (
+  const proposeAide = async (
     demandeId: string,
-    duree: number,
+    dureeMin: number,
+    message?: string,
     lienVideo?: string
+  ): Promise<PropositionAide> => {
+    if (!currentUser) throw new Error('Utilisateur non connecté');
+    const targetDemande = demandes.find((d) => d.id === demandeId);
+    if (!targetDemande) throw new Error('Demande introuvable');
+    if (targetDemande.statut !== 'ouverte') throw new Error('Cette demande n\'est plus disponible');
+
+    const newProposition: PropositionAide = {
+      id: `prop_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      aidant_id: currentUser.id,
+      aidant_nom: currentUser.nom,
+      aidant_classe: currentUser.classe,
+      aidant_ecole: currentUser.ecole,
+      aidant_note: currentUser.note_moyenne || 5.0,
+      aidant_nb_sessions: currentUser.nb_sessions_donnees || 0,
+      duree_proposee_min: dureeMin,
+      message: message?.trim(),
+      lien_video: lienVideo?.trim(),
+      created_at: new Date().toISOString(),
+    };
+
+    const updatedDemandes = demandes.map((d) => {
+      if (d.id === demandeId) {
+        const existingProps = d.propositions || [];
+        const filtered = existingProps.filter((p) => p.aidant_id !== currentUser.id);
+        return {
+          ...d,
+          propositions: [...filtered, newProposition],
+        };
+      }
+      return d;
+    });
+
+    setDemandes(updatedDemandes);
+    await StorageService.saveDemandes(updatedDemandes);
+    return newProposition;
+  };
+
+  const acceptProposition = async (
+    demandeId: string,
+    propositionId: string
   ): Promise<Session> => {
     if (!currentUser) throw new Error('Utilisateur non connecté');
     const targetDemande = demandes.find((d) => d.id === demandeId);
     if (!targetDemande) throw new Error('Demande introuvable');
-    if (targetDemande.statut !== 'ouverte') throw new Error('Cette demande a déjà été prise en charge');
+    if (targetDemande.statut !== 'ouverte') throw new Error('Cette demande est déjà prise en charge');
 
-    const creditsGain = calculateCreditsForMatiere(targetDemande.matiere, duree);
+    const prop = (targetDemande.propositions || []).find((p) => p.id === propositionId);
+    if (!prop) throw new Error('Proposition de tuteur introuvable');
+
+    const duration = prop.duree_proposee_min;
+    const creditsGain = calculateCreditsForMatiere(targetDemande.matiere, duration);
 
     const newSession: Session = {
       id: `session_${Date.now()}`,
       demande_id: targetDemande.id,
-      aidant_id: currentUser.id,
-      aidant_nom: currentUser.nom,
+      aidant_id: prop.aidant_id,
+      aidant_nom: prop.aidant_nom,
       demandeur_id: targetDemande.auteur_id,
       demandeur_nom: targetDemande.auteur_nom,
-      duree_min: duree,
+      duree_min: duration,
       matiere: targetDemande.matiere,
       mode: targetDemande.mode,
-      lien_video: lienVideo || targetDemande.lien_video,
+      lien_video: prop.lien_video || targetDemande.lien_video,
       audio_uri: targetDemande.audio_uri,
       credits_verses: creditsGain,
       date: new Date().toISOString(),
       statut: 'en_cours',
     };
 
-    // Update demande status to en_cours
     const updatedDemandes: Demande[] = demandes.map((d) =>
       d.id === demandeId
         ? {
             ...d,
             statut: 'en_cours',
-            aidant_id: currentUser.id,
-            aidant_nom: currentUser.nom,
+            aidant_id: prop.aidant_id,
+            aidant_nom: prop.aidant_nom,
+            duree_proposee: duration,
             session_id: newSession.id,
-            lien_video: lienVideo || d.lien_video,
+            lien_video: prop.lien_video || d.lien_video,
           }
         : d
     );
 
     const updatedSessions = [newSession, ...sessions];
-
     setDemandes(updatedDemandes);
     setSessions(updatedSessions);
     setActiveSession(newSession);
@@ -285,6 +342,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await StorageService.saveActiveSession(newSession);
 
     return newSession;
+  };
+
+  const simulateTutorProposition = async (
+    demandeId: string,
+    customTutor?: Partial<PropositionAide>
+  ): Promise<PropositionAide> => {
+    const targetDemande = demandes.find((d) => d.id === demandeId);
+    if (!targetDemande) throw new Error('Demande introuvable');
+
+    const candidateTutor =
+      users.find((u) => u.id !== targetDemande.auteur_id && isEligibleToHelp(u.classe, targetDemande.classe_demandeur)) ||
+      users.find((u) => u.id === 'user_thomas_tle') || {
+        id: 'user_thomas_tle',
+        nom: 'Thomas Dubois',
+        classe: 'Tle' as ClasseType,
+        ecole: 'Lycée Henri IV',
+        note_moyenne: 4.9,
+        nb_sessions_donnees: 8,
+      };
+
+    const newProposition: PropositionAide = {
+      id: `prop_sim_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      aidant_id: customTutor?.aidant_id || candidateTutor.id,
+      aidant_nom: customTutor?.aidant_nom || candidateTutor.nom,
+      aidant_classe: (customTutor?.aidant_classe || candidateTutor.classe) as ClasseType,
+      aidant_ecole: customTutor?.aidant_ecole || candidateTutor.ecole,
+      aidant_note: customTutor?.aidant_note || candidateTutor.note_moyenne || 4.9,
+      aidant_nb_sessions: customTutor?.aidant_nb_sessions || candidateTutor.nb_sessions_donnees || 8,
+      duree_proposee_min: customTutor?.duree_proposee_min || 15,
+      message: customTutor?.message || "Salut ! Je maîtrise bien ce sujet, je peux t'expliquer en 15 min chrono.",
+      lien_video: targetDemande.mode === 'video' ? 'https://meet.google.com/linkup-tutor' : undefined,
+      created_at: new Date().toISOString(),
+    };
+
+    const updatedDemandes = demandes.map((d) => {
+      if (d.id === demandeId) {
+        const existing = (d.propositions || []).filter((p) => p.aidant_id !== newProposition.aidant_id);
+        return {
+          ...d,
+          propositions: [...existing, newProposition],
+        };
+      }
+      return d;
+    });
+
+    setDemandes(updatedDemandes);
+    await StorageService.saveDemandes(updatedDemandes);
+    return newProposition;
+  };
+
+  const takeDemande = async (
+    demandeId: string,
+    duree: number,
+    lienVideo?: string
+  ): Promise<Session> => {
+    if (!currentUser) throw new Error('Utilisateur non connecté');
+    const prop = await proposeAide(demandeId, duree, undefined, lienVideo);
+    return acceptProposition(demandeId, prop.id);
   };
 
   const completeSession = async (sessionId: string): Promise<void> => {
@@ -475,6 +590,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         switchUser,
         validateQuizForMatiere,
         createDemande,
+        proposeAide,
+        acceptProposition,
+        simulateTutorProposition,
         takeDemande,
         completeSession,
         submitRating,

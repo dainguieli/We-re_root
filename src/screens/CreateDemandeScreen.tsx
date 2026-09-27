@@ -103,12 +103,11 @@ export const CreateDemandeScreen: React.FC<CreateDemandeScreenProps> = ({
         description: description.trim() || (mode === 'audio' ? 'Message vocal joint' : ''),
         mode,
         presentiel,
-        duree_proposee: duree,
       });
 
       Alert.alert(
         'Demande publiée !',
-        `Ta demande en ${currentMatiere.nom} (${selectedRubrique}) est maintenant visible par les élèves certifiés.`,
+        `Ta demande en ${currentMatiere.nom} (${selectedRubrique}) est publiée. Les tuteurs certifiés vont te proposer leur aide !`,
         [{ text: 'Super !', onPress: onSuccess }]
       );
     } catch (e) {
@@ -327,14 +326,14 @@ export const CreateDemandeScreen: React.FC<CreateDemandeScreenProps> = ({
           </View>
         </Card>
 
-        {/* 3. Modalités & Durée */}
+        {/* 3. Modalités d'échange */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>3. Modalités & Durée</Text>
+          <Text style={styles.sectionTitle}>3. Modalités & Présentiel</Text>
 
           {/* Présentiel Toggle */}
           <View style={styles.toggleRow}>
             <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={styles.toggleTitle}>Uniquement dans mon école (Présentiel)</Text>
+              <Text style={styles.toggleTitle}>Uniquement dans mon établissement (Présentiel)</Text>
               <Text style={styles.toggleDesc}>
                 Réservé aux élèves de {currentUser?.ecole || 'votre établissement'}
               </Text>
@@ -347,39 +346,17 @@ export const CreateDemandeScreen: React.FC<CreateDemandeScreenProps> = ({
             />
           </View>
 
-          {/* Durée estimée */}
-          <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Durée souhaitée</Text>
-          <View style={styles.durationChipsRow}>
-            {DURATIONS.map((d) => {
-              const isSelected = duree === d;
-              return (
-                <TouchableOpacity
-                  key={d}
-                  onPress={() => setDuree(d)}
-                  style={[
-                    styles.durationChip,
-                    isSelected && styles.durationChipSelected,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.durationChipText,
-                      isSelected && styles.durationChipTextSelected,
-                    ]}
-                  >
-                    {d} min
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Credit reward info banner */}
+          {/* Tutor estimated time banner */}
           <View style={styles.creditInfoBanner}>
-            <Ionicons name="gift" size={18} color={COLORS.accent} />
-            <Text style={styles.creditInfoText}>
-              L'aidant recevra <Text style={{ fontWeight: '800' }}>+{estimatedCredits} crédits</Text> à la validation de la session.
-            </Text>
+            <Ionicons name="time" size={20} color={COLORS.primary} />
+            <View style={{ marginLeft: 10, flex: 1 }}>
+              <Text style={[styles.creditInfoText, { color: COLORS.primary, fontWeight: '700' }]}>
+                Durée proposée par le tuteur
+              </Text>
+              <Text style={[styles.creditInfoText, { color: COLORS.textSecondary, marginTop: 2 }]}>
+                Chaque tuteur intéressé t'indiquera le temps nécessaire pour t'expliquer. Tu pourras ensuite choisir le tuteur de ton choix !
+              </Text>
+            </View>
           </View>
         </Card>
 

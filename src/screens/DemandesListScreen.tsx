@@ -125,9 +125,9 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
 
   // Sort order
   if (sortOrder === 'duration_asc') {
-    questionsList.sort((a, b) => a.duree_proposee - b.duree_proposee);
+    questionsList.sort((a, b) => (a.duree_proposee || 0) - (b.duree_proposee || 0));
   } else if (sortOrder === 'duration_desc') {
-    questionsList.sort((a, b) => b.duree_proposee - a.duree_proposee);
+    questionsList.sort((a, b) => (b.duree_proposee || 0) - (a.duree_proposee || 0));
   } else {
     // recent
     questionsList.sort(
@@ -386,7 +386,7 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
                       </Text>
                     ) : null}
 
-                    {/* Format Badge & Tutor info */}
+                    {/* Format Badge & Tutor / Proposals info */}
                     <View style={styles.metaRow}>
                       <View style={styles.metaItem}>
                         <Ionicons
@@ -395,9 +395,19 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
                           color={COLORS.primary}
                         />
                         <Text style={[styles.metaText, { color: COLORS.primary, fontWeight: '700' }]}>
-                          {demande.mode === 'audio' ? 'Message Audio' : 'Appel Vidéo'} • {demande.duree_proposee} min
+                          {demande.mode === 'audio' ? 'Message Audio' : 'Appel Vidéo'}
+                          {demande.duree_proposee ? ` • ${demande.duree_proposee} min` : ''}
                         </Text>
                       </View>
+
+                      {demande.statut === 'ouverte' && (demande.propositions || []).length > 0 && (
+                        <View style={styles.metaItem}>
+                          <Ionicons name="people" size={15} color={COLORS.secondary} />
+                          <Text style={[styles.metaText, { color: COLORS.secondary, fontWeight: '700' }]}>
+                            {(demande.propositions || []).length} proposition(s) reçue(s) !
+                          </Text>
+                        </View>
+                      )}
 
                       {demande.aidant_nom && (
                         <View style={styles.metaItem}>
@@ -728,9 +738,11 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
             ) : (
               <View style={styles.cardsContainer}>
                 {questionsList.map((demande) => {
-                  const creditsGain = calculateCreditsForMatiere(
+                  const myProp = (demande.propositions || []).find((p) => p.aidant_id === currentUser.id);
+                  const propCount = (demande.propositions || []).length;
+                  const estimatedGain = calculateCreditsForMatiere(
                     demande.matiere,
-                    demande.duree_proposee
+                    myProp?.duree_proposee_min || demande.duree_proposee || 15
                   );
 
                   return (
@@ -745,12 +757,20 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
                           <Badge label={demande.rubrique} variant="neutral" />
                         </View>
                         {isTutorMode ? (
-                          <View style={styles.rewardPill}>
-                            <Ionicons name="sparkles" size={13} color={COLORS.accent} />
-                            <Text style={styles.rewardText}>+{creditsGain} pts</Text>
-                          </View>
+                          myProp ? (
+                            <Badge label={`Proposé (${myProp.duree_proposee_min} min) ✓`} variant="secondary" size="sm" />
+                          ) : (
+                            <View style={styles.rewardPill}>
+                              <Ionicons name="sparkles" size={13} color={COLORS.accent} />
+                              <Text style={styles.rewardText}>~{estimatedGain} pts</Text>
+                            </View>
+                          )
                         ) : (
-                          <Badge label="Ouverte" variant="accent" size="sm" />
+                          <Badge
+                            label={propCount > 0 ? `${propCount} proposition(s)` : 'Ouverte'}
+                            variant={propCount > 0 ? 'secondary' : 'accent'}
+                            size="sm"
+                          />
                         )}
                       </View>
 
@@ -783,7 +803,8 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
                             color={COLORS.primary}
                           />
                           <Text style={[styles.metaText, { color: COLORS.primary, fontWeight: '700' }]}>
-                            {demande.mode === 'audio' ? 'Audio' : 'Vidéo'} • {demande.duree_proposee} min
+                            {demande.mode === 'audio' ? 'Audio' : 'Vidéo'}
+                            {demande.duree_proposee ? ` • ${demande.duree_proposee} min` : propCount > 0 ? ` • ${propCount} offre(s)` : ''}
                           </Text>
                         </View>
 
@@ -801,7 +822,7 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
                         <Text style={styles.timeAgoText}>{formatTimeAgo(demande.created_at)}</Text>
                         <View style={styles.actionHint}>
                           <Text style={styles.actionHintText}>
-                            {isTutorMode ? 'Prendre en charge' : 'Détails'}
+                            {isTutorMode ? 'Proposer mon aide' : 'Voir les propositions'}
                           </Text>
                           <Ionicons name="arrow-forward" size={14} color={COLORS.primary} />
                         </View>

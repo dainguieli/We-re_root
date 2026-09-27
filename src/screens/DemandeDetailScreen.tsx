@@ -16,7 +16,7 @@ import { Badge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { AudioPlayerWidget } from '../components/AudioWidget';
-import { Demande } from '../types';
+import { Demande, PropositionAide } from '../types';
 
 interface DemandeDetailScreenProps {
   demande: Demande;
@@ -33,14 +33,19 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
 }) => {
   const {
     currentUser,
-    takeDemande,
+    proposeAide,
+    acceptProposition,
+    simulateTutorProposition,
     cancelDemande,
     calculateCreditsForMatiere,
   } = useApp();
 
-  const [proposedDuration, setProposedDuration] = useState<number>(demande.duree_proposee);
+  // Tutor Proposal State
+  const [tutorDuration, setTutorDuration] = useState<number>(15);
+  const [tutorMessage, setTutorMessage] = useState<string>('');
   const [videoLink, setVideoLink] = useState<string>('https://meet.google.com/linkup-aide');
-  const [isTaking, setIsTaking] = useState<boolean>(false);
+  const [isSubmittingProposal, setIsSubmittingProposal] = useState<boolean>(false);
+  const [isAcceptingId, setIsAcceptingId] = useState<string | null>(null);
 
   if (!currentUser) return null;
 
@@ -51,26 +56,66 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
     currentUser.statut_tuteur === 'actif' &&
     demande.statut === 'ouverte';
 
-  const estimatedCredits = calculateCreditsForMatiere(demande.matiere, proposedDuration);
+  const proposalsList = demande.propositions || [];
+  const myExistingProposal = proposalsList.find((p) => p.aidant_id === currentUser.id);
 
-  const handleTakeDemande = async () => {
+  const estimatedCredits = calculateCreditsForMatiere(demande.matiere, tutorDuration);
+
+  // Tutor submits a time proposal
+  const handleSubmitProposal = async () => {
     if (demande.mode === 'video' && !videoLink.trim()) {
       Alert.alert('Lien requis', "Veuillez fournir un lien d'appel vidéo (Meet, WhatsApp, Jitsi).");
       return;
     }
 
     try {
-      setIsTaking(true);
-      await takeDemande(demande.id, proposedDuration, videoLink.trim());
+      setIsSubmittingProposal(true);
+      await proposeAide(
+        demande.id,
+        tutorDuration,
+        tutorMessage.trim() || undefined,
+        demande.mode === 'video' ? videoLink.trim() : undefined
+      );
+
       Alert.alert(
-        'Session démarrée !',
-        `Tu aides maintenant ${demande.auteur_nom}. Vous avez ${proposedDuration} min pour cette session.`,
+        'Proposition envoyée !',
+        `Tu as proposé ${tutorDuration} min d'explication à ${demande.auteur_nom}. L'élève va examiner les propositions et choisir son tuteur.`,
+        [{ text: 'Compris', onPress: onBack }]
+      );
+    } catch (e: any) {
+      Alert.alert('Erreur', e.message || "Impossible d'envoyer la proposition.");
+    } finally {
+      setIsSubmittingProposal(false);
+    }
+  };
+
+  // Requester chooses a tutor among candidates
+  const handleChooseTutor = async (prop: PropositionAide) => {
+    try {
+      setIsAcceptingId(prop.id);
+      await acceptProposition(demande.id, prop.id);
+      Alert.alert(
+        'Tuteur sélectionné ! 🎉',
+        `Tu as choisi ${prop.aidant_nom} pour t'expliquer (${prop.duree_proposee_min} min). La session démarre !`,
         [{ text: 'Accéder à la session', onPress: onSessionStarted }]
       );
     } catch (e: any) {
-      Alert.alert('Impossible de prendre en charge', e.message || 'Cette demande a déjà été prise en charge.');
+      Alert.alert('Erreur', e.message || 'Impossible de démarrer la session avec ce tuteur.');
     } finally {
-      setIsTaking(false);
+      setIsAcceptingId(null);
+    }
+  };
+
+  // Instant demo simulation
+  const handleSimulateDemoProposal = async () => {
+    try {
+      await simulateTutorProposition(demande.id);
+      Alert.alert(
+        'Proposition reçue !',
+        'Un tuteur certifié vient de te proposer son aide avec son estimation de temps.'
+      );
+    } catch (e: any) {
+      Alert.alert('Erreur', 'Impossible de simuler une proposition.');
     }
   };
 
@@ -125,7 +170,7 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
             <Badge
               label={
                 demande.statut === 'ouverte'
-                  ? 'Disponible'
+                  ? 'Ouverte'
                   : demande.statut === 'en_cours'
                   ? 'En cours'
                   : demande.statut === 'terminee'
@@ -144,7 +189,7 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
           </View>
 
           <Text style={styles.authorTitle}>
-            Demande de {demande.auteur_nom}
+            Question de {demande.auteur_nom}
           </Text>
 
           {/* Student meta info */}
@@ -194,27 +239,144 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
           )}
         </Card>
 
-        {/* =========================================================
-            ACTION SECTION FOR TUTOR (Only if request is OPEN)
-            ========================================================= */}
-        {demande.statut === 'ouverte' && isTutorEligible && (
+        {/* =========================================================================
+            SECTION 1 : DEMANDEUR — CHOIX DU TUTEUR PARMI LES PROPOSITIONS REÇUES
+            ========================================================================= */}
+        {isAuthor && demande.statut === 'ouverte' && (
+          <Card style={styles.proposalsCard}>
+            <View style={styles.proposalsHeaderRow}>
+              <View>
+                <Text style={styles.proposalsTitle}>
+                  Propositions de tuteurs ({proposalsList.length}) 👥
+                </Text>
+                <Text style={styles.proposalsSubtitle}>
+                  Choisis la personne dont tu veux recevoir les explications :
+                </Text>
+              </View>
+            </View>
+
+            {proposalsList.length === 0 ? (
+              <View style={styles.emptyProposalsBox}>
+                <Ionicons name="hourglass-outline" size={36} color={COLORS.textMuted} />
+                <Text style={styles.emptyProposalsText}>
+                  En attente de propositions de tuteurs certifiés...
+                </Text>
+                <Text style={styles.emptyProposalsSub}>
+                  Chaque tuteur va estimer le temps qu'il lui faut pour répondre.
+                </Text>
+                <Button
+                  title="⚡ Simuler une proposition de tuteur (Démo)"
+                  variant="outline"
+                  size="sm"
+                  onPress={handleSimulateDemoProposal}
+                  style={{ marginTop: 12 }}
+                />
+              </View>
+            ) : (
+              <View style={styles.proposalsList}>
+                {proposalsList.map((prop) => {
+                  const isBeingAccepted = isAcceptingId === prop.id;
+                  const rewardCredits = calculateCreditsForMatiere(
+                    demande.matiere,
+                    prop.duree_proposee_min
+                  );
+
+                  return (
+                    <Card key={prop.id} variant="flat" style={styles.proposalItemCard}>
+                      <View style={styles.proposalTopRow}>
+                        <View style={styles.proposalAvatar}>
+                          <Text style={styles.proposalAvatarText}>
+                            {prop.aidant_nom.charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Text style={styles.proposalTutorName}>{prop.aidant_nom}</Text>
+                            <Badge
+                              label={`⏱️ Propose ${prop.duree_proposee_min} min`}
+                              variant="accent"
+                              size="md"
+                            />
+                          </View>
+                          <Text style={styles.proposalTutorSchool}>
+                            Classe : {prop.aidant_classe} • {prop.aidant_ecole}
+                          </Text>
+                          <View style={styles.proposalMetaRow}>
+                            <View style={styles.ratingPill}>
+                              <Ionicons name="star" size={13} color={COLORS.accent} />
+                              <Text style={styles.ratingPillText}>
+                                {prop.aidant_note.toFixed(1)} / 5 ({prop.aidant_nb_sessions} sessions)
+                              </Text>
+                            </View>
+                            <Text style={styles.proposalCreditsText}>
+                              +{rewardCredits} crédits tuteur
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {prop.message && (
+                        <View style={styles.proposalMessageBox}>
+                          <Ionicons name="chatbubble-ellipses" size={14} color={COLORS.primary} />
+                          <Text style={styles.proposalMessageText}>"{prop.message}"</Text>
+                        </View>
+                      )}
+
+                      <Button
+                        title="🤝 Choisir ce tuteur pour m'expliquer"
+                        variant="secondary"
+                        size="md"
+                        loading={isBeingAccepted}
+                        onPress={() => handleChooseTutor(prop)}
+                        style={{ marginTop: 10 }}
+                      />
+                    </Card>
+                  );
+                })}
+
+                <Button
+                  title="+ Simuler une autre proposition (Démo)"
+                  variant="ghost"
+                  size="sm"
+                  onPress={handleSimulateDemoProposal}
+                  style={{ marginTop: 6 }}
+                />
+              </View>
+            )}
+          </Card>
+        )}
+
+        {/* =========================================================================
+            SECTION 2 : TUTEUR — PROPOSER LE TEMPS NÉCESSAIRE POUR EXPLIQUER
+            ========================================================================= */}
+        {!isAuthor && isTutorEligible && (
           <Card variant="highlight" style={styles.actionCard}>
-            <Text style={styles.actionCardTitle}>Prendre en charge cette demande 🤝</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Ionicons name="time" size={22} color={COLORS.primary} style={{ marginRight: 8 }} />
+              <Text style={styles.actionCardTitle}>Proposer mon aide à l'élève 🤝</Text>
+            </View>
             <Text style={styles.actionCardSubtitle}>
-              {demande.mode === 'audio'
-                ? "Écoute l'audio de l'élève ci-dessus puis confirme ton accompagnement :"
-                : "Prépare le lien vidéo pour démarrer l'appel avec l'élève :"}
+              Indique le temps que tu estimes nécessaire pour lui expliquer ce qui est demandé :
             </Text>
 
-            {/* Duration selector */}
-            <Text style={styles.fieldLabel}>Durée de la session :</Text>
+            {myExistingProposal && (
+              <View style={styles.existingProposalBanner}>
+                <Ionicons name="checkmark-circle" size={18} color={COLORS.secondary} />
+                <Text style={styles.existingProposalText}>
+                  Tu as déjà proposé <Text style={{ fontWeight: '800' }}>{myExistingProposal.duree_proposee_min} min</Text>. En attente du choix de {demande.auteur_nom}.
+                </Text>
+              </View>
+            )}
+
+            {/* Time Estimation selector (Rule: Seul celui qui aide propose le temps) */}
+            <Text style={styles.fieldLabel}>Temps estimé pour expliquer :</Text>
             <View style={styles.durationsRow}>
               {DURATIONS.map((d) => {
-                const isSelected = proposedDuration === d;
+                const isSelected = tutorDuration === d;
                 return (
                   <TouchableOpacity
                     key={d}
-                    onPress={() => setProposedDuration(d)}
+                    onPress={() => setTutorDuration(d)}
                     style={[
                       styles.durationChip,
                       isSelected && styles.durationChipSelected,
@@ -233,9 +395,21 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
               })}
             </View>
 
+            {/* Optional message from tutor */}
+            <Text style={[styles.fieldLabel, { marginTop: 10 }]}>
+              Message ou précision pour l'élève (optionnel) :
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: Je suis dispo maintenant, j'ai eu 18 à ce contrôle..."
+              placeholderTextColor={COLORS.textMuted}
+              value={tutorMessage}
+              onChangeText={setTutorMessage}
+            />
+
             {/* Video link input if mode is video */}
             {demande.mode === 'video' && (
-              <View style={{ marginTop: 12 }}>
+              <View style={{ marginTop: 10 }}>
                 <Text style={styles.fieldLabel}>Lien d'appel vidéo (Meet, WhatsApp, Jitsi) :</Text>
                 <TextInput
                   style={styles.input}
@@ -250,18 +424,18 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
 
             {/* Credit reward info */}
             <View style={styles.creditsRewardRow}>
-              <Ionicons name="sparkles" size={20} color={COLORS.accent} />
+              <Ionicons name="sparkles" size={18} color={COLORS.accent} />
               <Text style={styles.creditsRewardText}>
-                Tu gagneras <Text style={{ fontWeight: '800' }}>+{estimatedCredits} crédits</Text> à la fin de cette session !
+                Tu recevras <Text style={{ fontWeight: '800' }}>+{estimatedCredits} crédits</Text> si l'élève choisit ta proposition !
               </Text>
             </View>
 
             <Button
-              title={demande.mode === 'audio' ? "✅ Valider et démarrer l'entraide" : "📞 Démarrer la session vidéo"}
+              title={myExistingProposal ? "Modifier ma proposition d'aide" : `🚀 Envoyer ma proposition (${tutorDuration} min)`}
               size="lg"
               variant="secondary"
-              loading={isTaking}
-              onPress={handleTakeDemande}
+              loading={isSubmittingProposal}
+              onPress={handleSubmitProposal}
               style={{ marginTop: 14 }}
             />
           </Card>
@@ -271,11 +445,11 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
         {demande.statut === 'en_cours' && (
           <Card variant="flat" style={styles.inProgressCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-              <Ionicons name="time" size={22} color={COLORS.secondary} style={{ marginRight: 6 }} />
-              <Text style={styles.inProgressTitle}>Session d'aide en cours</Text>
+              <Ionicons name="play-circle" size={22} color={COLORS.secondary} style={{ marginRight: 6 }} />
+              <Text style={styles.inProgressTitle}>Session d'entraide en cours</Text>
             </View>
             <Text style={styles.inProgressDesc}>
-              Tuteur accompagnateur : <Text style={{ fontWeight: '700' }}>{demande.aidant_nom || 'Attribué'}</Text>
+              Tuteur sélectionné : <Text style={{ fontWeight: '700' }}>{demande.aidant_nom || 'Attribué'}</Text> ({demande.duree_proposee || 15} min)
             </Text>
             <Button
               title="Accéder à l'écran de session active"
@@ -397,6 +571,123 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 6,
   },
+
+  // Proposals Received Card (Requester View)
+  proposalsCard: {
+    padding: 16,
+    marginBottom: 16,
+  },
+  proposalsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  proposalsTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  proposalsSubtitle: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  emptyProposalsBox: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: COLORS.cardAlt,
+    borderRadius: 14,
+  },
+  emptyProposalsText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  emptyProposalsSub: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  proposalsList: {
+    gap: 12,
+  },
+  proposalItemCard: {
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: COLORS.cardAlt,
+    borderWidth: 1.5,
+    borderColor: COLORS.primaryLight,
+  },
+  proposalTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  proposalAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  proposalAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  proposalTutorName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  proposalTutorSchool: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 1,
+  },
+  proposalMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  ratingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  proposalCreditsText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.accent,
+  },
+  proposalMessageBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    padding: 8,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  proposalMessageText: {
+    fontSize: 12,
+    color: COLORS.text,
+    fontStyle: 'italic',
+    flex: 1,
+  },
+
+  // Action Section (Tutor View)
   actionCard: {
     padding: 16,
     marginBottom: 16,
@@ -412,6 +703,20 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: 14,
   },
+  existingProposalBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.secondaryLight,
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  existingProposalText: {
+    fontSize: 12,
+    color: COLORS.secondary,
+    flex: 1,
+  },
   fieldLabel: {
     fontSize: 13,
     fontWeight: '700',
@@ -422,7 +727,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   durationChip: {
     paddingVertical: 8,
@@ -458,13 +763,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.accentLight,
-    padding: 12,
-    borderRadius: 12,
-    marginTop: 14,
+    padding: 10,
+    borderRadius: 10,
+    marginTop: 12,
   },
   creditsRewardText: {
     marginLeft: 8,
-    fontSize: 13,
+    fontSize: 12,
     color: '#78350F',
     fontWeight: '600',
   },

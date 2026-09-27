@@ -76,6 +76,20 @@ export interface MatiereConfig {
 export type ModeDemande = 'audio' | 'video';
 export type StatutDemande = 'ouverte' | 'en_cours' | 'terminee' | 'annulee';
 
+export interface PropositionAide {
+  id: string;
+  aidant_id: string;
+  aidant_nom: string;
+  aidant_classe: ClasseType;
+  aidant_ecole: string;
+  aidant_note: number;
+  aidant_nb_sessions: number;
+  duree_proposee_min: number; // Temps que le tuteur estime nécessaire pour expliquer
+  message?: string;
+  lien_video?: string;
+  created_at: string;
+}
+
 export interface Demande {
   id: string;
   auteur_id: string;
@@ -93,11 +107,12 @@ export interface Demande {
   mode: ModeDemande;
   presentiel: boolean; // filtre = meme ecole obligatoire si true
   statut: StatutDemande;
-  duree_proposee: number; // 5-30 min
-  lien_video?: string; // rempli par l'aidant si mode = video
+  duree_proposee?: number; // Défini par le tuteur choisi
+  lien_video?: string; // Rempli par l'aidant choisi si mode = video
   aidant_id?: string;
   aidant_nom?: string;
   session_id?: string;
+  propositions?: PropositionAide[]; // Candidatures des tuteurs proposant leur aide
   created_at: string;
 }
 
