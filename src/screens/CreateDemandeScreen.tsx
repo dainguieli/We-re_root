@@ -17,7 +17,8 @@ import { Button } from '../components/Button';
 import { Badge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { AudioRecorderWidget } from '../components/AudioWidget';
-import { ModeDemande } from '../types';
+import { SuccessModal } from '../components/SuccessModal';
+import { ModeDemande, CRENEAUX_HORAIRES } from '../types';
 
 interface CreateDemandeScreenProps {
   onSuccess: () => void;
@@ -26,15 +27,13 @@ interface CreateDemandeScreenProps {
   initialRubrique?: string;
 }
 
-const DURATIONS = [5, 10, 15, 20, 25, 30];
-
 export const CreateDemandeScreen: React.FC<CreateDemandeScreenProps> = ({
   onSuccess,
   onCancel,
   initialMatiere,
   initialRubrique,
 }) => {
-  const { currentUser, matieres, createDemande, calculateCreditsForMatiere } = useApp();
+  const { currentUser, matieres, createDemande } = useApp();
 
   const foundMatiere = initialMatiere
     ? matieres.find((m) => m.nom.toLowerCase() === initialMatiere.toLowerCase()) || matieres[0]
@@ -52,10 +51,13 @@ export const CreateDemandeScreen: React.FC<CreateDemandeScreenProps> = ({
   const [audioUri, setAudioUri] = useState<string | undefined>(undefined);
   const [audioDurationSec, setAudioDurationSec] = useState<number | undefined>(undefined);
   
+  // 1-Hour Availability Time Slot between 6h and 18h
+  const [selectedCreneau, setSelectedCreneau] = useState<string>('14h00 - 15h00');
+  
   const [presentiel, setPresentiel] = useState<boolean>(false);
-  const [duree, setDuree] = useState<number>(15);
   const [photoUri, setPhotoUri] = useState<string | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
 
   const currentMatiere = matieres.find((m) => m.id === selectedMatiereId) || matieres[0];
 
@@ -101,23 +103,18 @@ export const CreateDemandeScreen: React.FC<CreateDemandeScreenProps> = ({
         audio_uri: audioUri,
         audio_duration_sec: audioDurationSec,
         description: description.trim() || (mode === 'audio' ? 'Message vocal joint' : ''),
+        creneau_horaire: selectedCreneau,
         mode,
         presentiel,
       });
 
-      Alert.alert(
-        'Demande publiée !',
-        `Ta demande en ${currentMatiere.nom} (${selectedRubrique}) est publiée. Les tuteurs certifiés vont te proposer leur aide !`,
-        [{ text: 'Super !', onPress: onSuccess }]
-      );
+      setShowSuccessModal(true);
     } catch (e) {
       Alert.alert('Erreur', 'Impossible de publier la demande.');
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  const estimatedCredits = calculateCreditsForMatiere(currentMatiere.nom, duree);
 
   return (
     <ScrollView
@@ -326,9 +323,52 @@ export const CreateDemandeScreen: React.FC<CreateDemandeScreenProps> = ({
           </View>
         </Card>
 
-        {/* 3. Modalités d'échange */}
+        {/* 3. Créneau horaire de disponibilité (1h entre 6h et 18h) */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>3. Modalités & Présentiel</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <Ionicons name="time-outline" size={20} color={COLORS.primary} style={{ marginRight: 6 }} />
+            <Text style={styles.sectionTitle}>3. Créneau horaire de disponibilité (1h)</Text>
+          </View>
+          <Text style={styles.formatSubtitle}>
+            Précise le créneau d'une heure pendant lequel tu es disponible pour l'échange (entre 6h et 18h) :
+          </Text>
+
+          <View style={styles.creneauxGrid}>
+            {CRENEAUX_HORAIRES.map((creneau) => {
+              const isSelected = selectedCreneau === creneau;
+              return (
+                <TouchableOpacity
+                  key={creneau}
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedCreneau(creneau)}
+                  style={[
+                    styles.creneauChip,
+                    isSelected && styles.creneauChipSelected,
+                  ]}
+                >
+                  <Ionicons
+                    name={isSelected ? 'checkmark-circle' : 'time'}
+                    size={14}
+                    color={isSelected ? '#FFFFFF' : COLORS.textSecondary}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text
+                    style={[
+                      styles.creneauChipText,
+                      isSelected && styles.creneauChipTextSelected,
+                    ]}
+                  >
+                    {creneau}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Card>
+
+        {/* 4. Modalités & Présentiel */}
+        <Card style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>4. Modalités & Présentiel</Text>
 
           {/* Présentiel Toggle */}
           <View style={styles.toggleRow}>
@@ -346,15 +386,15 @@ export const CreateDemandeScreen: React.FC<CreateDemandeScreenProps> = ({
             />
           </View>
 
-          {/* Tutor estimated time banner */}
+          {/* Tutor estimated time & rating credit banner */}
           <View style={styles.creditInfoBanner}>
-            <Ionicons name="time" size={20} color={COLORS.primary} />
+            <Ionicons name="sparkles" size={20} color={COLORS.accent} />
             <View style={{ marginLeft: 10, flex: 1 }}>
-              <Text style={[styles.creditInfoText, { color: COLORS.primary, fontWeight: '700' }]}>
-                Durée proposée par le tuteur
+              <Text style={[styles.creditInfoText, { color: '#92400E', fontWeight: '700' }]}>
+                Proposition du tuteur & attribution des crédits
               </Text>
-              <Text style={[styles.creditInfoText, { color: COLORS.textSecondary, marginTop: 2 }]}>
-                Chaque tuteur intéressé t'indiquera le temps nécessaire pour t'expliquer. Tu pourras ensuite choisir le tuteur de ton choix !
+              <Text style={[styles.creditInfoText, { color: '#78350F', marginTop: 2 }]}>
+                Seul le tuteur propose le temps dont il a besoin pour t'expliquer. À la fin, c'est toi qui donnes une note à l'explication pour lui attribuer ses crédits !
               </Text>
             </View>
           </View>
@@ -368,6 +408,20 @@ export const CreateDemandeScreen: React.FC<CreateDemandeScreenProps> = ({
           style={{ marginVertical: 20 }}
         />
       </View>
+
+      {/* Animated Validation Modal */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Question publiée ! 🎉"
+        subtitle={`Ta demande en ${currentMatiere.nom} (${selectedRubrique}) est en ligne pour le créneau ${selectedCreneau}. Les tuteurs certifiés vont te proposer le temps nécessaire pour t'expliquer !`}
+        buttonText="Voir mes demandes"
+        badgeText={`📅 ${selectedCreneau}`}
+        secondaryBadgeText={mode === 'audio' ? 'Message Audio 🎙️' : 'Appel Vidéo 📹'}
+        onClose={() => {
+          setShowSuccessModal(false);
+          onSuccess();
+        }}
+      />
     </ScrollView>
   );
 };
@@ -642,5 +696,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#78350F',
     flex: 1,
+  },
+  creneauxGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  creneauChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: COLORS.cardAlt,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+  },
+  creneauChipSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  creneauChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  creneauChipTextSelected: {
+    color: '#FFFFFF',
   },
 });

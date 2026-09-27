@@ -83,7 +83,7 @@ export const ActiveSessionScreen: React.FC<ActiveSessionScreenProps> = ({
   const handleFinishSession = () => {
     Alert.alert(
       'Terminer la session',
-      `Confirmez-vous la fin de cette session d'entraide ?\n+${activeSession.credits_verses} crédits seront versés à l'aidant (${activeSession.aidant_nom}).`,
+      `Confirmez-vous la fin de cette session d'entraide ?\nL'élève donnera une note à l'explication pour attribuer les crédits à ${activeSession.aidant_nom}.`,
       [
         { text: 'Poursuivre la session', style: 'cancel' },
         {
@@ -176,7 +176,7 @@ export const ActiveSessionScreen: React.FC<ActiveSessionScreenProps> = ({
               <Text style={styles.participantRole}>Tuteur / Aidant</Text>
               <Text style={styles.participantName}>{activeSession.aidant_nom}</Text>
             </View>
-            <Badge label={`+${activeSession.credits_verses} pts`} variant="accent" size="sm" />
+            <Badge label="Crédits selon note ⭐" variant="accent" size="sm" />
           </View>
 
           <View style={[styles.participantRow, { marginTop: 12 }]}>
@@ -227,7 +227,7 @@ export const ActiveSessionScreen: React.FC<ActiveSessionScreenProps> = ({
             onPress={handleFinishSession}
           />
           <Text style={styles.footerTip}>
-            Les crédits seront automatiquement versés au tuteur et une notation sera demandée.
+            L'élève donnera ensuite une note à l'explication (1 à 5 étoiles) qui attribuera les crédits au tuteur.
           </Text>
         </View>
       </View>

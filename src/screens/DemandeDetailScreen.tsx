@@ -16,6 +16,7 @@ import { Badge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { AudioPlayerWidget } from '../components/AudioWidget';
+import { SuccessModal } from '../components/SuccessModal';
 import { Demande, PropositionAide } from '../types';
 
 interface DemandeDetailScreenProps {
@@ -46,6 +47,7 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
   const [videoLink, setVideoLink] = useState<string>('https://meet.google.com/linkup-aide');
   const [isSubmittingProposal, setIsSubmittingProposal] = useState<boolean>(false);
   const [isAcceptingId, setIsAcceptingId] = useState<string | null>(null);
+  const [showProposalSuccessModal, setShowProposalSuccessModal] = useState<boolean>(false);
 
   if (!currentUser) return null;
 
@@ -58,8 +60,6 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
 
   const proposalsList = demande.propositions || [];
   const myExistingProposal = proposalsList.find((p) => p.aidant_id === currentUser.id);
-
-  const estimatedCredits = calculateCreditsForMatiere(demande.matiere, tutorDuration);
 
   // Tutor submits a time proposal
   const handleSubmitProposal = async () => {
@@ -77,11 +77,7 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
         demande.mode === 'video' ? videoLink.trim() : undefined
       );
 
-      Alert.alert(
-        'Proposition envoyée !',
-        `Tu as proposé ${tutorDuration} min d'explication à ${demande.auteur_nom}. L'élève va examiner les propositions et choisir son tuteur.`,
-        [{ text: 'Compris', onPress: onBack }]
-      );
+      setShowProposalSuccessModal(true);
     } catch (e: any) {
       Alert.alert('Erreur', e.message || "Impossible d'envoyer la proposition.");
     } finally {
@@ -200,6 +196,12 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
                 {demande.auteur_ecole} • Classe de {demande.classe_demandeur}
               </Text>
             </View>
+            <View style={[styles.studentInfoRow, { marginTop: 4 }]}>
+              <Ionicons name="time" size={16} color={COLORS.primary} />
+              <Text style={[styles.studentInfoText, { color: COLORS.primary, fontWeight: '700' }]}>
+                Disponibilité : {demande.creneau_horaire || '06h00 - 18h00'} (1h)
+              </Text>
+            </View>
             {demande.presentiel && (
               <View style={[styles.studentInfoRow, { marginTop: 4 }]}>
                 <Ionicons name="location" size={16} color={COLORS.secondary} />
@@ -309,7 +311,7 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
                               </Text>
                             </View>
                             <Text style={styles.proposalCreditsText}>
-                              +{rewardCredits} crédits tuteur
+                              Gagne des crédits selon ta note ⭐
                             </Text>
                           </View>
                         </View>
@@ -422,11 +424,11 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
               </View>
             )}
 
-            {/* Credit reward info */}
+            {/* Credit reward info based on rating rule */}
             <View style={styles.creditsRewardRow}>
               <Ionicons name="sparkles" size={18} color={COLORS.accent} />
               <Text style={styles.creditsRewardText}>
-                Tu recevras <Text style={{ fontWeight: '800' }}>+{estimatedCredits} crédits</Text> si l'élève choisit ta proposition !
+                Tes crédits seront calculés d'après la note attribuée par l'élève à ton explication (note élevée = plus de crédits) !
               </Text>
             </View>
 
@@ -484,6 +486,20 @@ export const DemandeDetailScreen: React.FC<DemandeDetailScreenProps> = ({
           />
         )}
       </View>
+
+      {/* Animated Validation Modal for Tutor Proposal */}
+      <SuccessModal
+        visible={showProposalSuccessModal}
+        title="Proposition d'aide envoyée ! 🎉"
+        subtitle={`Tu as proposé ${tutorDuration} min d'explication à ${demande.auteur_nom} sur son créneau (${demande.creneau_horaire || 'disponible'}). L'élève va pouvoir choisir son tuteur !`}
+        buttonText="Retour aux demandes"
+        badgeText={`⏱️ Proposé : ${tutorDuration} min`}
+        secondaryBadgeText={`📅 ${demande.creneau_horaire || 'Créneau demandé'}`}
+        onClose={() => {
+          setShowProposalSuccessModal(false);
+          onBack();
+        }}
+      />
     </ScrollView>
   );
 };

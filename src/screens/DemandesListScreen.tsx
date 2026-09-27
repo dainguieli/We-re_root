@@ -400,6 +400,13 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
                         </Text>
                       </View>
 
+                      {demande.creneau_horaire && (
+                        <View style={styles.metaItem}>
+                          <Ionicons name="time-outline" size={14} color={COLORS.textSecondary} />
+                          <Text style={styles.metaText}>{demande.creneau_horaire}</Text>
+                        </View>
+                      )}
+
                       {demande.statut === 'ouverte' && (demande.propositions || []).length > 0 && (
                         <View style={styles.metaItem}>
                           <Ionicons name="people" size={15} color={COLORS.secondary} />
@@ -740,10 +747,8 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
                 {questionsList.map((demande) => {
                   const myProp = (demande.propositions || []).find((p) => p.aidant_id === currentUser.id);
                   const propCount = (demande.propositions || []).length;
-                  const estimatedGain = calculateCreditsForMatiere(
-                    demande.matiere,
-                    myProp?.duree_proposee_min || demande.duree_proposee || 15
-                  );
+                  const matObj = matieres.find((m) => m.nom.toLowerCase() === demande.matiere.toLowerCase());
+                  const maxReward = matObj && matObj.coefficient > 1.0 ? 37.5 : 25;
 
                   return (
                     <Card
@@ -762,7 +767,7 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
                           ) : (
                             <View style={styles.rewardPill}>
                               <Ionicons name="sparkles" size={13} color={COLORS.accent} />
-                              <Text style={styles.rewardText}>~{estimatedGain} pts</Text>
+                              <Text style={styles.rewardText}>Max {maxReward} pts</Text>
                             </View>
                           )
                         ) : (
@@ -807,6 +812,15 @@ export const DemandesListScreen: React.FC<DemandesListScreenProps> = ({
                             {demande.duree_proposee ? ` • ${demande.duree_proposee} min` : propCount > 0 ? ` • ${propCount} offre(s)` : ''}
                           </Text>
                         </View>
+
+                        {demande.creneau_horaire && (
+                          <View style={styles.metaItem}>
+                            <Ionicons name="time-outline" size={14} color={COLORS.secondary} />
+                            <Text style={[styles.metaText, { color: COLORS.secondary, fontWeight: '700' }]}>
+                              {demande.creneau_horaire}
+                            </Text>
+                          </View>
+                        )}
 
                         {demande.presentiel && (
                           <View style={styles.metaItem}>

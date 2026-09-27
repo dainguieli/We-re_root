@@ -14,6 +14,7 @@ import { COLORS, SHADOWS } from '../theme/colors';
 import { Badge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
+import { SuccessModal } from '../components/SuccessModal';
 import { Session } from '../types';
 
 interface RatingScreenProps {
@@ -22,20 +23,19 @@ interface RatingScreenProps {
 }
 
 export const RatingScreen: React.FC<RatingScreenProps> = ({ session, onDone }) => {
-  const { submitRating } = useApp();
+  const { submitRating, calculateCreditsFromRatingForMatiere } = useApp();
   const [rating, setRating] = useState<number>(5);
   const [comment, setComment] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
+
+  const calculatedCredits = calculateCreditsFromRatingForMatiere(session.matiere, rating);
 
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
       await submitRating(session.id, rating, comment.trim());
-      Alert.alert(
-        'Merci pour ton retour !',
-        'Ton évaluation a bien été enregistrée pour aider la communauté.',
-        [{ text: 'Continuer', onPress: onDone }]
-      );
+      setShowSuccessModal(true);
     } catch (e) {
       Alert.alert('Erreur', "Impossible d'enregistrer l'évaluation.");
     } finally {
@@ -50,7 +50,7 @@ export const RatingScreen: React.FC<RatingScreenProps> = ({ session, onDone }) =
       case 4:
         return 'Très bien ! Ça ma beaucoup aidé 👍';
       case 3:
-        return 'Correct, problème en partie résolu 🙂';
+        return 'Correct, problème résolu 🙂';
       case 2:
         return 'Moyen, explications peu claires 😕';
       case 1:
@@ -74,7 +74,7 @@ export const RatingScreen: React.FC<RatingScreenProps> = ({ session, onDone }) =
 
       <Card style={styles.mainCard}>
         {/* Star Selector */}
-        <Text style={styles.ratingTitle}>Ta note :</Text>
+        <Text style={styles.ratingTitle}>Ta note à l'explication :</Text>
         <View style={styles.starsRow}>
           {[1, 2, 3, 4, 5].map((star) => (
             <TouchableOpacity
@@ -85,7 +85,7 @@ export const RatingScreen: React.FC<RatingScreenProps> = ({ session, onDone }) =
             >
               <Ionicons
                 name={star <= rating ? 'star' : 'star-outline'}
-                size={38}
+                size={40}
                 color={star <= rating ? COLORS.accent : COLORS.border}
               />
             </TouchableOpacity>
@@ -93,6 +93,19 @@ export const RatingScreen: React.FC<RatingScreenProps> = ({ session, onDone }) =
         </View>
 
         <Text style={styles.ratingFeedbackText}>{getRatingLabel(rating)}</Text>
+
+        {/* Dynamic Credit Reward based on rating */}
+        <View style={styles.creditRewardBox}>
+          <Ionicons name="sparkles" size={20} color={COLORS.accent} />
+          <View style={{ flex: 1, marginLeft: 8 }}>
+            <Text style={styles.creditRewardTitle}>
+              Crédits attribués à {session.aidant_nom} :
+            </Text>
+            <Text style={styles.creditRewardValue}>
+              +{calculatedCredits} crédits (note : {rating}/5)
+            </Text>
+          </View>
+        </View>
 
         {/* Comment input */}
         <Text style={styles.commentLabel}>Commentaire ou remerciement (optionnel) :</Text>
@@ -111,18 +124,32 @@ export const RatingScreen: React.FC<RatingScreenProps> = ({ session, onDone }) =
         <View style={styles.infoBox}>
           <Ionicons name="shield-checkmark" size={18} color={COLORS.primary} />
           <Text style={styles.infoText}>
-            Les notes permettent de valoriser les élèves tuteurs bienveillants et d'ajuster leur note moyenne.
+            Les crédits sont attribués en fonction de la qualité de ton évaluation. Plus la note est haute, plus le tuteur gagne de crédits !
           </Text>
         </View>
 
         <Button
-          title="Envoyer mon évaluation"
+          title={`Valider l'évaluation (+${calculatedCredits} crédits)`}
           size="lg"
           loading={isSubmitting}
           onPress={handleSubmit}
           style={{ marginTop: 20 }}
         />
       </Card>
+
+      {/* Animated Validation Modal */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Merci pour ton retour ! 🎉"
+        subtitle={`Ton évaluation de ${rating}/5 a bien été enregistrée. +${calculatedCredits} crédits ont été versés à ${session.aidant_nom}.`}
+        buttonText="Retour à l'accueil"
+        badgeText={`${session.matiere} • ${rating}/5 ★`}
+        secondaryBadgeText={`+${calculatedCredits} crédits versés`}
+        onClose={() => {
+          setShowSuccessModal(false);
+          onDone();
+        }}
+      />
     </ScrollView>
   );
 };
@@ -220,5 +247,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.primary,
     lineHeight: 16,
+  },
+  creditRewardBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.accentLight,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.accent + '40',
+  },
+  creditRewardTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400E',
+  },
+  creditRewardValue: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#B45309',
+    marginTop: 2,
   },
 });

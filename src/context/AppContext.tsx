@@ -11,6 +11,7 @@ import {
   KycDocType,
   PropositionAide,
   isEligibleToHelp,
+  calculateCreditsFromRating,
 } from '../types';
 import matieresJson from '../data/matieres.json';
 import { StorageService } from '../services/storage';
@@ -50,6 +51,7 @@ interface AppContextType {
     description?: string;
     audio_uri?: string;
     audio_duration_sec?: number;
+    creneau_horaire?: string;
     mode: ModeDemande;
     presentiel: boolean;
     duree_proposee?: number;
@@ -72,6 +74,7 @@ interface AppContextType {
   resetDatabase: () => Promise<void>;
   getFilteredDemandesForCurrentUser: () => Demande[];
   calculateCreditsForMatiere: (matiereNom: string, dureeMin: number) => number;
+  calculateCreditsFromRatingForMatiere: (matiereNom: string, rating: number) => number;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -120,6 +123,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const mat = matieres.find((m) => m.nom.toLowerCase() === matiereNom.toLowerCase());
     const coeff = mat ? mat.coefficient : 1.0;
     return Math.round(dureeMin * coeff * 10) / 10;
+  };
+
+  const calculateCreditsFromRatingForMatiere = (matiereNom: string, rating: number): number => {
+    const mat = matieres.find((m) => m.nom.toLowerCase() === matiereNom.toLowerCase());
+    const coeff = mat ? mat.coefficient : 1.0;
+    return calculateCreditsFromRating(rating, coeff);
   };
 
   const registerUser = async (data: {
@@ -210,6 +219,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     description?: string;
     audio_uri?: string;
     audio_duration_sec?: number;
+    creneau_horaire?: string;
     mode: ModeDemande;
     presentiel: boolean;
     duree_proposee?: number;
@@ -230,6 +240,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       audio_uri: data.audio_uri,
       audio_duration_sec: data.audio_duration_sec,
       classe_demandeur: currentUser.classe,
+      creneau_horaire: data.creneau_horaire,
       mode: data.mode,
       presentiel: data.presentiel,
       statut: 'ouverte',
@@ -411,46 +422,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       statut: 'terminee',
     };
 
-    // Credit reward to tutor
-    const tutorId = completedSession.aidant_id;
-    const creditGain = completedSession.credits_verses;
-
-    const updatedUsers = users.map((u) => {
-      if (u.id === tutorId) {
-        return {
-          ...u,
-          credits: u.credits + creditGain,
-          nb_sessions_donnees: u.nb_sessions_donnees + 1,
-        };
-      }
-      return u;
-    });
-
-    // Update active user state if current user is the tutor
-    if (currentUser && currentUser.id === tutorId) {
-      setCurrentUser((prev) =>
-        prev
-          ? {
-              ...prev,
-              credits: prev.credits + creditGain,
-              nb_sessions_donnees: prev.nb_sessions_donnees + 1,
-            }
-          : null
-      );
-    }
-
     const updatedSessions = sessions.map((s) => (s.id === sessionId ? completedSession : s));
     const updatedDemandes = demandes.map((d) =>
       d.id === completedSession.demande_id ? { ...d, statut: 'terminee' as const } : d
     );
 
-    setUsers(updatedUsers);
     setSessions(updatedSessions);
     setDemandes(updatedDemandes);
     setActiveSession(null);
     setPendingRatingSession(completedSession);
 
-    await StorageService.saveUsers(updatedUsers);
     await StorageService.saveSessions(updatedSessions);
     await StorageService.saveDemandes(updatedDemandes);
     await StorageService.saveActiveSession(null);
@@ -468,8 +449,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const tutorId = sessionRated.aidant_id;
     const isNegative = rating <= 2;
 
+    // Credit calculation rule:
+    // Credits awarded to the tutor depend directly on the student's rating and subject coefficient
+    const mat = matieres.find((m) => m.nom.toLowerCase() === sessionRated.matiere.toLowerCase());
+    const coeff = mat ? mat.coefficient : 1.0;
+    const creditGain = calculateCreditsFromRating(rating, coeff);
+
     const updatedSessions = sessions.map((s) =>
-      s.id === sessionId ? { ...s, note_recue: rating, commentaire } : s
+      s.id === sessionId
+        ? { ...s, note_recue: rating, commentaire, credits_verses: creditGain, statut: 'terminee' as const }
+        : s
     );
 
     // Update tutor ratings, note moyenne, negative counts & suspension rules
@@ -496,6 +485,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         return {
           ...u,
+          credits: u.credits + creditGain,
+          nb_sessions_donnees: u.nb_sessions_donnees + 1,
           note_moyenne: averageScore,
           nb_evaluations_negatives: newTotalNegatives,
           consecutive_negatives: newConsecutive,
@@ -600,6 +591,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resetDatabase,
         getFilteredDemandesForCurrentUser,
         calculateCreditsForMatiere,
+        calculateCreditsFromRatingForMatiere,
       }}
     >
       {children}

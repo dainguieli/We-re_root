@@ -73,6 +73,33 @@ export interface MatiereConfig {
   rubriques: string[];
 }
 
+export const CRENEAUX_HORAIRES: string[] = [
+  '06h00 - 07h00',
+  '07h00 - 08h00',
+  '08h00 - 09h00',
+  '09h00 - 10h00',
+  '10h00 - 11h00',
+  '11h00 - 12h00',
+  '12h00 - 13h00',
+  '13h00 - 14h00',
+  '14h00 - 15h00',
+  '15h00 - 16h00',
+  '16h00 - 17h00',
+  '17h00 - 18h00',
+];
+
+export function calculateCreditsFromRating(rating: number, coefficient: number = 1.0): number {
+  const baseMap: Record<number, number> = {
+    5: 25, // Excellent (max reward)
+    4: 20, // Très bien
+    3: 15, // Bien / Correct
+    2: 8,  // Moyen
+    1: 3,  // Insuffisant
+  };
+  const base = baseMap[Math.round(rating)] ?? 15;
+  return Math.round(base * coefficient * 10) / 10;
+}
+
 export type ModeDemande = 'audio' | 'video';
 export type StatutDemande = 'ouverte' | 'en_cours' | 'terminee' | 'annulee';
 
@@ -104,6 +131,7 @@ export interface Demande {
   audio_uri?: string;
   audio_duration_sec?: number;
   classe_demandeur: ClasseType;
+  creneau_horaire?: string; // Créneau 1h dispo entre 6h et 18h (ex: '14h00 - 15h00')
   mode: ModeDemande;
   presentiel: boolean; // filtre = meme ecole obligatoire si true
   statut: StatutDemande;

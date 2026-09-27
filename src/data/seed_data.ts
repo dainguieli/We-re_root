@@ -107,6 +107,7 @@ export const SEED_DEMANDES: Demande[] = [
     audio_duration_sec: 24,
     audio_uri: 'sample_audio_1',
     classe_demandeur: '3e',
+    creneau_horaire: '16h00 - 17h00',
     mode: 'audio',
     presentiel: false,
     statut: 'ouverte',
@@ -148,6 +149,7 @@ export const SEED_DEMANDES: Demande[] = [
     rubrique: 'Électricité',
     description: "Besoin d'aide pour comprendre les lois des tensions en circuit série et dérivation avant le contrôle !",
     classe_demandeur: '4e',
+    creneau_horaire: '14h00 - 15h00',
     mode: 'video',
     presentiel: true, // Présentiel Condorcet
     statut: 'ouverte',
@@ -166,6 +168,7 @@ export const SEED_DEMANDES: Demande[] = [
     audio_duration_sec: 18,
     audio_uri: 'sample_audio_3',
     classe_demandeur: '3e',
+    creneau_horaire: '17h00 - 18h00',
     mode: 'audio',
     presentiel: false,
     statut: 'ouverte',
