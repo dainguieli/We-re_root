@@ -1,6 +1,8 @@
 import { User, Demande, Session } from '../types';
 import { SEED_USERS, SEED_DEMANDES, SEED_SESSIONS } from '../data/seed_data';
 
+const DEFAULT_STARTUP_USER_ID = 'user_awa_3e';
+
 const STORAGE_KEYS = {
   CURRENT_USER: '@linkup_current_user_v1',
   USERS: '@linkup_users_v1',
@@ -67,7 +69,7 @@ export const StorageService = {
       await setItem(STORAGE_KEYS.SESSIONS, sessions);
     }
     if (!currentUser && users.length > 0) {
-      currentUser = users[0];
+      currentUser = users.find((user) => user.id === DEFAULT_STARTUP_USER_ID) ?? users[0];
       await setItem(STORAGE_KEYS.CURRENT_USER, currentUser);
     }
 

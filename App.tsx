@@ -4,7 +4,6 @@ import {
   StyleSheet,
   View,
   StatusBar,
-  ActivityIndicator,
   TouchableOpacity,
   Text,
 } from 'react-native';
@@ -38,10 +37,8 @@ type ScreenType =
 function MainApp() {
   const {
     currentUser,
-    isLoading,
     activeSession,
     pendingRatingSession,
-    currentMode,
   } = useApp();
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('list');
@@ -49,14 +46,6 @@ function MainApp() {
   const [createMatiere, setCreateMatiere] = useState<string | undefined>(undefined);
   const [createRubrique, setCreateRubrique] = useState<string | undefined>(undefined);
   const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState<boolean>(false);
-
-  if (isLoading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
 
   // If no user exists, show register screen
   if (!currentUser) {
@@ -330,12 +319,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
     width: '100%',
-    backgroundColor: COLORS.background,
-  },
-  centerContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: COLORS.background,
   },
   body: {
