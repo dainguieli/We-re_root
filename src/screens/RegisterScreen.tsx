@@ -9,6 +9,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
@@ -74,9 +75,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSuccess, onCan
         )}
 
         <View style={styles.header}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="school" size={32} color={COLORS.primary} />
-          </View>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logoBig}
+            resizeMode="contain"
+          />
           <Text style={styles.title}>Bienvenue sur LinkUp</Text>
           <Text style={styles.subtitle}>
             L'entraide scolaire entre élèves, sans argent, en crédits de temps !
@@ -253,13 +256,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+  logoBig: {
+    width: 80,
+    height: 80,
     marginBottom: 12,
   },
   title: {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { COLORS, SHADOWS } from '../theme/colors';
@@ -24,8 +24,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenUserSwitch, onOpenProfile 
         {/* Top row: Brand + Credits + Profile Avatar */}
         <View style={styles.topRow}>
           <View style={styles.brandRow}>
-            <View style={styles.logoCircle}>
-              <Ionicons name="school" size={20} color={COLORS.primary} />
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('../../assets/logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
             <View>
               <Text style={styles.brandTitle}>LinkUp</Text>
@@ -152,17 +156,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logoCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primaryLight,
+  logoContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+    ...SHADOWS.sm,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: 36,
+    height: 36,
   },
   brandTitle: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '800',
     color: COLORS.primary,
     letterSpacing: -0.5,
