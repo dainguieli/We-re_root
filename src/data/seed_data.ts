@@ -1,6 +1,26 @@
 import { User, Demande, Session } from '../types';
+import { getDemoStudentCardUri } from '../utils/kycDemoAssets';
 
 export const SEED_USERS: User[] = [
+  {
+    id: 'user_awa_3e',
+    nom: 'Awa Koffi',
+    age: 15,
+    classe: '3e',
+    ecole: 'Collège Sainte-Marie',
+    role_prefere: 'les_deux',
+    credits: 20,
+    quiz_valide_par_matiere: {},
+    matieres_fortes: ['Mathématiques', 'Anglais'],
+    kyc_soumis: true,
+    kyc_type: 'carte_scolaire',
+    kyc_document_uri: getDemoStudentCardUri('Awa Koffi', 'Collège Sainte-Marie', '3e'),
+    note_moyenne: 5.0,
+    nb_sessions_donnees: 0,
+    nb_evaluations_negatives: 0,
+    consecutive_negatives: 0,
+    statut_tuteur: 'actif',
+  },
   {
     id: 'user_lucas_2nde',
     nom: 'Lucas Martin',
@@ -13,6 +33,9 @@ export const SEED_USERS: User[] = [
       'Mathématiques': true,
       'Français': true,
     },
+    matieres_fortes: ['Mathématiques', 'Français'],
+    kyc_soumis: true,
+    kyc_type: 'carte_scolaire',
     note_moyenne: 4.8,
     nb_sessions_donnees: 3,
     nb_evaluations_negatives: 0,

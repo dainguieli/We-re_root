@@ -94,54 +94,74 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.profileName}>{currentUser.nom}</Text>
-            <Text style={styles.profileSchool}>{currentUser.ecole}</Text>
-            <View style={styles.profileBadgesRow}>
-              <Badge label={`Classe : ${currentUser.classe}`} variant="primary" size="sm" />
-              <Badge
-                label={isSuspended ? 'Tuteur suspendu' : 'Tuteur actif'}
-                variant={isSuspended ? 'danger' : 'secondary'}
-                size="sm"
-              />
+              <Text style={styles.profileSchool}>{currentUser.ecole}</Text>
+              <View style={styles.profileBadgesRow}>
+                <Badge label={`Classe : ${currentUser.classe}`} variant="primary" size="sm" />
+                <Badge
+                  label={isSuspended ? 'Tuteur suspendu' : 'Tuteur actif'}
+                  variant={isSuspended ? 'danger' : 'secondary'}
+                  size="sm"
+                />
+                <Badge
+                  label={currentUser.kyc_soumis ? 'KYC validé ✓' : 'KYC en attente'}
+                  variant={currentUser.kyc_soumis ? 'secondary' : 'neutral'}
+                  size="sm"
+                />
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* Credits Balance Box */}
-        <View style={styles.creditsBanner}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={styles.sparkleCircle}>
-              <Ionicons name="sparkles" size={22} color={COLORS.accent} />
-            </View>
-            <View>
-              <Text style={styles.creditsLabel}>Solde de crédits temps</Text>
-              <Text style={styles.creditsAmount}>{currentUser.credits} points</Text>
+          {/* Credits Balance Box */}
+          <View style={styles.creditsBanner}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={styles.sparkleCircle}>
+                <Ionicons name="sparkles" size={22} color={COLORS.accent} />
+              </View>
+              <View>
+                <Text style={styles.creditsLabel}>Solde de crédits temps</Text>
+                <Text style={styles.creditsAmount}>{currentUser.credits} points</Text>
+              </View>
             </View>
           </View>
+        </Card>
+
+        {/* KYC Verification details if present */}
+        {currentUser.kyc_document_uri && (
+          <Card variant="flat" style={styles.kycProfileCard}>
+            <View style={styles.kycProfileRow}>
+              <Ionicons name="shield-checkmark" size={20} color={COLORS.secondary} />
+              <Text style={styles.kycProfileTitle}>
+                Statut élève vérifié : {currentUser.kyc_type === 'carte_scolaire' ? 'Carte scolaire' : "Reçu d'inscription"}
+              </Text>
+            </View>
+            <Text style={styles.kycProfileSubtitle}>
+              Document lié au profil et certifié pour l'entraide entre pairs.
+            </Text>
+          </Card>
+        )}
+
+        {/* Tutor Stats Grid */}
+        <View style={styles.statsGrid}>
+          <Card style={styles.statCard}>
+            <Ionicons name="star" size={24} color={COLORS.accent} />
+            <Text style={styles.statValue}>
+              {currentUser.note_moyenne ? currentUser.note_moyenne.toFixed(1) : '5.0'} / 5
+            </Text>
+            <Text style={styles.statLabel}>Note moyenne</Text>
+          </Card>
+
+          <Card style={styles.statCard}>
+            <Ionicons name="people" size={24} color={COLORS.primary} />
+            <Text style={styles.statValue}>{currentUser.nb_sessions_donnees}</Text>
+            <Text style={styles.statLabel}>Sessions données</Text>
+          </Card>
+
+          <Card style={styles.statCard}>
+            <Ionicons name="ribbon" size={24} color={COLORS.secondary} />
+            <Text style={styles.statValue}>{validatedSubjectsList.length}</Text>
+            <Text style={styles.statLabel}>Quiz validés</Text>
+          </Card>
         </View>
-      </Card>
-
-      {/* Tutor Stats Grid */}
-      <View style={styles.statsGrid}>
-        <Card style={styles.statCard}>
-          <Ionicons name="star" size={24} color={COLORS.accent} />
-          <Text style={styles.statValue}>
-            {currentUser.note_moyenne ? currentUser.note_moyenne.toFixed(1) : '5.0'} / 5
-          </Text>
-          <Text style={styles.statLabel}>Note moyenne</Text>
-        </Card>
-
-        <Card style={styles.statCard}>
-          <Ionicons name="people" size={24} color={COLORS.primary} />
-          <Text style={styles.statValue}>{currentUser.nb_sessions_donnees}</Text>
-          <Text style={styles.statLabel}>Sessions données</Text>
-        </Card>
-
-        <Card style={styles.statCard}>
-          <Ionicons name="ribbon" size={24} color={COLORS.secondary} />
-          <Text style={styles.statValue}>{validatedSubjectsList.length}</Text>
-          <Text style={styles.statLabel}>Quiz validés</Text>
-        </Card>
-      </View>
 
       {/* Validated Subjects Section */}
       <Card style={styles.sectionCard}>
@@ -384,6 +404,28 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: '#92400E',
+  },
+  kycProfileCard: {
+    padding: 12,
+    marginBottom: 14,
+    backgroundColor: COLORS.cardAlt,
+    borderRadius: 14,
+  },
+  kycProfileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  kycProfileTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  kycProfileSubtitle: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginLeft: 28,
   },
   statsGrid: {
     flexDirection: 'row',

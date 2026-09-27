@@ -8,6 +8,7 @@ import {
   RolePrefere,
   StatutTuteur,
   ModeDemande,
+  KycDocType,
   isEligibleToHelp,
 } from '../types';
 import matieresJson from '../data/matieres.json';
@@ -31,7 +32,11 @@ interface AppContextType {
     age: number | string;
     classe: ClasseType;
     ecole: string;
-    role_prefere: RolePrefere;
+    role_prefere?: RolePrefere;
+    matieres_fortes?: string[];
+    kyc_soumis?: boolean;
+    kyc_type?: KycDocType;
+    kyc_document_uri?: string;
   }) => Promise<User>;
   updateUserRolePrefere: (role: RolePrefere) => Promise<void>;
   switchUser: (userId: string) => Promise<void>;
@@ -110,17 +115,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     age: number | string;
     classe: ClasseType;
     ecole: string;
-    role_prefere: RolePrefere;
+    role_prefere?: RolePrefere;
+    matieres_fortes?: string[];
+    kyc_soumis?: boolean;
+    kyc_type?: KycDocType;
+    kyc_document_uri?: string;
   }): Promise<User> => {
+    const role = data.role_prefere || 'les_deux';
     const newUser: User = {
       id: `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       nom: data.nom.trim(),
       age: Number(data.age) || 15,
       classe: data.classe,
       ecole: data.ecole.trim(),
-      role_prefere: data.role_prefere,
+      role_prefere: role,
       credits: 20, // initial welcome bonus credits
       quiz_valide_par_matiere: {},
+      matieres_fortes: data.matieres_fortes || [],
+      kyc_soumis: data.kyc_soumis ?? true,
+      kyc_type: data.kyc_type || 'carte_scolaire',
+      kyc_document_uri: data.kyc_document_uri,
       note_moyenne: 5.0,
       nb_sessions_donnees: 0,
       nb_evaluations_negatives: 0,
@@ -132,7 +146,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedUsers = [newUser, ...users];
     setUsers(updatedUsers);
     setCurrentUser(newUser);
-    setCurrentMode(data.role_prefere === 'aide' ? 'aide' : 'besoin');
+    setCurrentMode(role === 'aide' ? 'aide' : 'besoin');
 
     await StorageService.saveUsers(updatedUsers);
     await StorageService.saveCurrentUser(newUser);

@@ -26,8 +26,22 @@ export function isEligibleToHelp(aidantClasse: ClasseType, demandeurClasse: Clas
   return CLASSE_ORDER[demandeurClasse] <= CLASSE_ORDER[aidantClasse];
 }
 
+export const ECOLES_PARTENAIRES: string[] = [
+  'Collège Sainte-Marie',
+  'Lycée Condorcet',
+  'Lycée Henri-IV',
+  'Lycée Louis-le-Grand',
+  'Collège Victor Hugo',
+  'Cours Secondaire Protestant',
+  'Collège Jean Moulin',
+  'Lycée International',
+  'Collège Moderne Cocody',
+  'Lycée Classique',
+];
+
 export type RolePrefere = 'aide' | 'besoin' | 'les_deux';
 export type StatutTuteur = 'actif' | 'suspendu';
+export type KycDocType = 'carte_scolaire' | 'recu_inscription';
 
 export interface User {
   id: string;
@@ -38,6 +52,10 @@ export interface User {
   role_prefere: RolePrefere;
   credits: number;
   quiz_valide_par_matiere: Record<string, boolean>;
+  matieres_fortes?: string[]; // 2 selected subjects during onboarding
+  kyc_soumis?: boolean;
+  kyc_type?: KycDocType;
+  kyc_document_uri?: string;
   note_moyenne: number;
   nb_sessions_donnees: number;
   nb_evaluations_negatives: number;
